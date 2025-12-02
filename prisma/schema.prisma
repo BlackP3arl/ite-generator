@@ -1,0 +1,44 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  password      String?  // For email/password login (hashed)
+  azureId       String?  @unique
+  role          String   @default("user") // user, admin
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  ites          ITE[]
+}
+
+model ITE {
+  id             Int      @id @default(autoincrement())
+  iteNumber      String   @unique // Format: "ITE YYYY/XXX"
+  year           Int      // To easily track running numbers per year
+  runningNumber  Int      // The XXX part
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // JSON fields to store the document structure
+  metadata       String   // JSON string: { itsNo, eprf, forUser }
+  itsFields      String   // JSON string: Array of ITS fields
+  comparisonData String   // JSON string: Full comparison object
+  recommendations String  // JSON string: Recommendations state
+  supplierFiles  String?  // JSON string: Array of file paths
+  itsFilePath    String?  // Path to the ITS PDF file
+  comments       String?
+  acceptedCells  String?  // JSON string: Manually accepted non-compliant cells
+
+  // User relationship
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
