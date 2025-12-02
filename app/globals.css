@@ -681,6 +681,15 @@ body {
   background: #fef3c7;
 }
 
+.btn-pdf {
+  color: #7c3aed;
+  background: #f3e8ff;
+}
+
+.btn-pdf:hover {
+  background: #e9d5ff;
+}
+
 .btn-delete {
   color: var(--color-error);
   background: var(--color-error-bg);

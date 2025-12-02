@@ -494,6 +494,67 @@ export default function Home() {
     }
   };
 
+  // Delete ITE
+  const deleteITE = async (e, iteId) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this ITE?')) return;
+
+    try {
+      const res = await fetch(`/api/ite/${iteId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        await fetchITEs();
+        if (currentITEId === iteId) {
+          resetWorkflow();
+        }
+      } else {
+        alert('Failed to delete ITE');
+      }
+    } catch (err) {
+      console.error('Error deleting ITE:', err);
+      alert('Failed to delete ITE');
+    }
+  };
+
+  // Export ITE as PDF
+  const exportPDF = async (e, iteId) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/ite/${iteId}/export-pdf`);
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // Extract filename from Content-Disposition header
+        const contentDisposition = res.headers.get('Content-Disposition');
+        let filename = `ITE-${iteId}.pdf`; // fallback filename
+
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1];
+          }
+        }
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('Failed to export PDF');
+      }
+    } catch (err) {
+      console.error('Error exporting PDF:', err);
+      alert('Failed to export PDF');
+    }
+  };
+
   // Reset workflow
   const resetWorkflow = () => {
     setStep(1);
@@ -898,12 +959,23 @@ export default function Home() {
                   </button>
                 </div>
 
-                <button
-                  className={`btn ${isEditMode ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setIsEditMode(!isEditMode)}
-                >
-                  {isEditMode ? '💾 Save Changes' : '✏️ Enable Edit Mode'}
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {currentITEId && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={(e) => exportPDF(e, currentITEId)}
+                      title="Export as PDF"
+                    >
+                      📄 Export PDF
+                    </button>
+                  )}
+                  <button
+                    className={`btn ${isEditMode ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setIsEditMode(!isEditMode)}
+                  >
+                    {isEditMode ? '💾 Save Changes' : '✏️ Enable Edit Mode'}
+                  </button>
+                </div>
               </div>
 
               <div style={{ overflowX: 'auto' }}>
