@@ -1,10 +1,33 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
+import { validateCSRF } from '../../../../lib/csrf';
+import { applyRateLimit, RATE_LIMITS } from '../../../../lib/rateLimit';
 
 // Update user role (admin only)
 export async function PUT(request) {
   try {
+    // Rate limiting
+    const rateLimitResult = applyRateLimit(request, RATE_LIMITS.ADMIN);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: rateLimitResult.error },
+        {
+          status: 429,
+          headers: rateLimitResult.headers
+        }
+      );
+    }
+
+    // CSRF protection
+    const csrfValidation = validateCSRF(request);
+    if (!csrfValidation.valid) {
+      return NextResponse.json(
+        { error: csrfValidation.error },
+        { status: 403 }
+      );
+    }
+
     await requireAdmin();
 
     const { userId, role } = await request.json();

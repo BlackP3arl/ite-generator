@@ -2,10 +2,33 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { getCurrentUser, requireAdmin } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
+import { validateCSRF } from '../../../../lib/csrf';
+import { applyRateLimit, RATE_LIMITS } from '../../../../lib/rateLimit';
 
 // Set or update a user's password (admin only)
 export async function POST(request) {
   try {
+    // Rate limiting
+    const rateLimitResult = applyRateLimit(request, RATE_LIMITS.ADMIN);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: rateLimitResult.error },
+        {
+          status: 429,
+          headers: rateLimitResult.headers
+        }
+      );
+    }
+
+    // CSRF protection
+    const csrfValidation = validateCSRF(request);
+    if (!csrfValidation.valid) {
+      return NextResponse.json(
+        { error: csrfValidation.error },
+        { status: 403 }
+      );
+    }
+
     // Only admins can set passwords
     await requireAdmin();
 

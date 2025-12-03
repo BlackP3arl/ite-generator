@@ -1,8 +1,21 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { applyRateLimit, RATE_LIMITS } from '../../../lib/rateLimit';
 
 export async function POST(request) {
   try {
+    // Apply rate limiting for AI endpoints
+    const rateLimitResult = applyRateLimit(request, RATE_LIMITS.AI);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: rateLimitResult.error },
+        {
+          status: 429,
+          headers: rateLimitResult.headers
+        }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file');
 
@@ -90,9 +103,12 @@ ${pdfText}`
     });
 
   } catch (error) {
+    // Log detailed error server-side only
     console.error('Error extracting ITS:', error);
+
+    // Return generic error message to client
     return NextResponse.json(
-      { error: error.message || 'Failed to extract ITS specifications' },
+      { error: 'Failed to extract ITS specifications. Please try again or contact support if the issue persists.' },
       { status: 500 }
     );
   }
