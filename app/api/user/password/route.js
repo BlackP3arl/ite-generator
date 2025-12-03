@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { getCurrentUser, requireAdmin } from '../../../../lib/auth';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../../../lib/prisma';
 
 // Set or update a user's password (admin only)
 export async function POST(request) {

@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { requireAdmin } from '../../../../lib/auth';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../../../lib/prisma';
 
 // Get all users (admin only)
 export async function GET() {

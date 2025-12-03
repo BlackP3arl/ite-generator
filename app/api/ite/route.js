@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { getCurrentUser } from '../../../lib/auth';
+import { prisma } from '../../../lib/prisma';
+import { sanitizeFilename, validateFilePath, validateUploadedFile, verifyPDFFile } from '../../../lib/fileUtils';
 import fs from 'fs';
 import path from 'path';
-
-const prisma = new PrismaClient();
 
 export async function GET() {
     try {
@@ -70,9 +69,40 @@ export async function POST(request) {
         // Handle ITS File
         const itsFile = formData.get('itsFile');
         if (itsFile && itsFile instanceof Blob) {
+            // Validate file
+            const validation = validateUploadedFile(itsFile);
+            if (!validation.valid) {
+                return NextResponse.json(
+                    { error: `ITS file validation failed: ${validation.errors.join(', ')}` },
+                    { status: 400 }
+                );
+            }
+
             const buffer = Buffer.from(await itsFile.arrayBuffer());
-            const fileName = `ITS_${itsFile.name}`;
+
+            // Verify PDF magic bytes
+            if (!verifyPDFFile(buffer)) {
+                return NextResponse.json(
+                    { error: 'ITS file is not a valid PDF' },
+                    { status: 400 }
+                );
+            }
+
+            // Sanitize filename
+            const sanitizedName = sanitizeFilename(itsFile.name);
+            const fileName = `ITS_${sanitizedName}`;
             const filePath = path.join(uploadDir, fileName);
+
+            // Validate path is within upload directory
+            try {
+                validateFilePath(filePath, uploadDir);
+            } catch (error) {
+                return NextResponse.json(
+                    { error: 'Invalid file path' },
+                    { status: 400 }
+                );
+            }
+
             fs.writeFileSync(filePath, buffer);
             itsFilePath = `/uploads/${iteNumber.replace('/', '_')}/${fileName}`;
         }
@@ -81,9 +111,40 @@ export async function POST(request) {
         for (let i = 0; i < 4; i++) {
             const file = formData.get(`supplierFile${i}`);
             if (file && file instanceof Blob) {
+                // Validate file
+                const validation = validateUploadedFile(file);
+                if (!validation.valid) {
+                    return NextResponse.json(
+                        { error: `Supplier file ${i} validation failed: ${validation.errors.join(', ')}` },
+                        { status: 400 }
+                    );
+                }
+
                 const buffer = Buffer.from(await file.arrayBuffer());
-                const fileName = `supplier_${i}_${file.name}`;
+
+                // Verify PDF magic bytes
+                if (!verifyPDFFile(buffer)) {
+                    return NextResponse.json(
+                        { error: `Supplier file ${i} is not a valid PDF` },
+                        { status: 400 }
+                    );
+                }
+
+                // Sanitize filename
+                const sanitizedName = sanitizeFilename(file.name);
+                const fileName = `supplier_${i}_${sanitizedName}`;
                 const filePath = path.join(uploadDir, fileName);
+
+                // Validate path is within upload directory
+                try {
+                    validateFilePath(filePath, uploadDir);
+                } catch (error) {
+                    return NextResponse.json(
+                        { error: 'Invalid file path' },
+                        { status: 400 }
+                    );
+                }
+
                 fs.writeFileSync(filePath, buffer);
                 supplierFiles.push(`/uploads/${iteNumber.replace('/', '_')}/${fileName}`);
             } else {

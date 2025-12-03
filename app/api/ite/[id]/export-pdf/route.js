@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../auth/[...nextauth]/route';
+import { prisma } from '../../../../../lib/prisma';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
-const prisma = new PrismaClient();
 
 export async function GET(request, { params }) {
   try {
@@ -14,9 +12,14 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    // Validate ID parameter
+    const id = parseInt(params.id, 10);
+    if (isNaN(id) || id < 1) {
+      return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+    }
+
     const ite = await prisma.iTE.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
       include: { user: true },
     });
 

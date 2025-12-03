@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { requireAdmin } from '../../../../lib/auth';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../../../lib/prisma';
 
 // Update user role (admin only)
 export async function PUT(request) {

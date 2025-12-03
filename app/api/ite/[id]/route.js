@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { getCurrentUser, canAccessResource } from '../../../../lib/auth';
+import { prisma } from '../../../../lib/prisma';
+import { sanitizeFilename, validateFilePath, validateUploadedFile, verifyPDFFile } from '../../../../lib/fileUtils';
 import fs from 'fs';
 import path from 'path';
-
-const prisma = new PrismaClient();
 
 export async function GET(request, { params }) {
     try {
@@ -12,15 +11,29 @@ export async function GET(request, { params }) {
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-        const id = parseInt(params.id);
-        const ite = await prisma.iTE.findUnique({ where: { id } });
+
+        // Validate ID parameter
+        const id = parseInt(params.id, 10);
+        if (isNaN(id) || id < 1) {
+            return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+        }
+
+        // Fetch with authorization filter to prevent IDOR
+        const ite = await prisma.iTE.findFirst({
+            where: {
+                id,
+                OR: [
+                    { userId: user.id },
+                    { user: { role: 'admin' } }
+                ]
+            }
+        });
+
         if (!ite) {
-            return NextResponse.json({ error: 'ITE not found' }, { status: 404 });
+            // Same response for not found and forbidden to prevent enumeration
+            return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
-        const hasAccess = await canAccessResource(ite.userId);
-        if (!hasAccess) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+
         return NextResponse.json(ite);
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch ITE' }, { status: 500 });
@@ -33,14 +46,27 @@ export async function PUT(request, { params }) {
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-        const id = parseInt(params.id);
-        const existingITE = await prisma.iTE.findUnique({ where: { id } });
-        if (!existingITE) {
-            return NextResponse.json({ error: 'ITE not found' }, { status: 404 });
+
+        // Validate ID parameter
+        const id = parseInt(params.id, 10);
+        if (isNaN(id) || id < 1) {
+            return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
         }
-        const hasAccess = await canAccessResource(existingITE.userId);
-        if (!hasAccess) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+        // Fetch with authorization filter to prevent IDOR
+        const existingITE = await prisma.iTE.findFirst({
+            where: {
+                id,
+                OR: [
+                    { userId: user.id },
+                    { user: { role: 'admin' } }
+                ]
+            }
+        });
+
+        if (!existingITE) {
+            // Same response for not found and forbidden to prevent enumeration
+            return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
         const formData = await request.formData();
         const comparisonData = JSON.parse(formData.get('comparisonData'));
@@ -56,18 +82,80 @@ export async function PUT(request, { params }) {
         }
         const itsFile = formData.get('itsFile');
         if (itsFile && itsFile instanceof Blob) {
+            // Validate file
+            const validation = validateUploadedFile(itsFile);
+            if (!validation.valid) {
+                return NextResponse.json(
+                    { error: `ITS file validation failed: ${validation.errors.join(', ')}` },
+                    { status: 400 }
+                );
+            }
+
             const buffer = Buffer.from(await itsFile.arrayBuffer());
-            const fileName = 'ITS_' + itsFile.name;
+
+            // Verify PDF magic bytes
+            if (!verifyPDFFile(buffer)) {
+                return NextResponse.json(
+                    { error: 'ITS file is not a valid PDF' },
+                    { status: 400 }
+                );
+            }
+
+            // Sanitize filename
+            const sanitizedName = sanitizeFilename(itsFile.name);
+            const fileName = 'ITS_' + sanitizedName;
             const filePath = path.join(uploadDir, fileName);
+
+            // Validate path is within upload directory
+            try {
+                validateFilePath(filePath, uploadDir);
+            } catch (error) {
+                return NextResponse.json(
+                    { error: 'Invalid file path' },
+                    { status: 400 }
+                );
+            }
+
             fs.writeFileSync(filePath, buffer);
             itsFilePath = '/uploads/' + iteNumber.replace('/', '_') + '/' + fileName;
         }
         for (let i = 0; i < 4; i++) {
             const file = formData.get('supplierFile' + i);
             if (file && file instanceof Blob) {
+                // Validate file
+                const validation = validateUploadedFile(file);
+                if (!validation.valid) {
+                    return NextResponse.json(
+                        { error: `Supplier file ${i} validation failed: ${validation.errors.join(', ')}` },
+                        { status: 400 }
+                    );
+                }
+
                 const buffer = Buffer.from(await file.arrayBuffer());
-                const fileName = 'supplier_' + i + '_' + file.name;
+
+                // Verify PDF magic bytes
+                if (!verifyPDFFile(buffer)) {
+                    return NextResponse.json(
+                        { error: `Supplier file ${i} is not a valid PDF` },
+                        { status: 400 }
+                    );
+                }
+
+                // Sanitize filename
+                const sanitizedName = sanitizeFilename(file.name);
+                const fileName = 'supplier_' + i + '_' + sanitizedName;
                 const filePath = path.join(uploadDir, fileName);
+
+                // Validate path is within upload directory
+                try {
+                    validateFilePath(filePath, uploadDir);
+                } catch (error) {
+                    return NextResponse.json(
+                        { error: 'Invalid file path' },
+                        { status: 400 }
+                    );
+                }
+
                 fs.writeFileSync(filePath, buffer);
                 supplierFiles[i] = '/uploads/' + iteNumber.replace('/', '_') + '/' + fileName;
             }
@@ -96,14 +184,27 @@ export async function DELETE(request, { params }) {
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-        const id = parseInt(params.id);
-        const ite = await prisma.iTE.findUnique({ where: { id } });
-        if (!ite) {
-            return NextResponse.json({ error: 'ITE not found' }, { status: 404 });
+
+        // Validate ID parameter
+        const id = parseInt(params.id, 10);
+        if (isNaN(id) || id < 1) {
+            return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
         }
-        const hasAccess = await canAccessResource(ite.userId);
-        if (!hasAccess) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+        // Fetch with authorization filter to prevent IDOR
+        const ite = await prisma.iTE.findFirst({
+            where: {
+                id,
+                OR: [
+                    { userId: user.id },
+                    { user: { role: 'admin' } }
+                ]
+            }
+        });
+
+        if (!ite) {
+            // Same response for not found and forbidden to prevent enumeration
+            return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
         const uploadDir = path.join(process.cwd(), 'public', 'uploads', ite.iteNumber.replace('/', '_'));
         if (fs.existsSync(uploadDir)) {
