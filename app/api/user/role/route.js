@@ -39,9 +39,9 @@ export async function PUT(request) {
       );
     }
 
-    if (role !== 'user' && role !== 'admin') {
+    if (role !== 'user' && role !== 'viewer' && role !== 'admin') {
       return NextResponse.json(
-        { error: 'Invalid role. Must be "user" or "admin"' },
+        { error: 'Invalid role. Must be "user", "viewer", or "admin"' },
         { status: 400 }
       );
     }

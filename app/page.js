@@ -590,6 +590,11 @@ export default function Home() {
                     ADMIN
                   </span>
                 )}
+                {session.user.role === 'viewer' && (
+                  <span style={{ marginLeft: '0.5rem', background: '#c3dafe', color: '#2d3748', padding: '0.125rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>
+                    VIEWER
+                  </span>
+                )}
               </span>
               {session.user.role === 'admin' && (
                 <button

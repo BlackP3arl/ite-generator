@@ -14,7 +14,7 @@ model User {
   name          String?
   password      String?  // For email/password login (hashed)
   azureId       String?  @unique
-  role          String   @default("user") // user, admin
+  role          String   @default("user") // user, viewer, admin
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   ites          ITE[]

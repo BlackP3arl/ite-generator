@@ -32,11 +32,19 @@ export async function POST(request) {
     // Only admins can set passwords
     await requireAdmin();
 
-    const { email, password, name } = await request.json();
+    const { email, password, name, role } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate role if provided
+    if (role && role !== 'user' && role !== 'viewer' && role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Invalid role. Must be "user", "viewer", or "admin"' },
         { status: 400 }
       );
     }
@@ -84,7 +92,7 @@ export async function POST(request) {
           email,
           password: hashedPassword,
           name: name || email.split('@')[0], // Use email prefix as default name
-          role: 'user', // Default role
+          role: role || 'user', // Use provided role or default to user
         },
       });
 

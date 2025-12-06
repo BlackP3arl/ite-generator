@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    // Redirect if not authenticated or not admin (includes viewers)
     if (status === 'authenticated' && session?.user?.role !== 'admin') {
       router.push('/');
     }
@@ -183,6 +184,7 @@ export default function AdminPage() {
                 style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
               >
                 <option value="user">User</option>
+                <option value="viewer">Viewer</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
@@ -225,10 +227,11 @@ export default function AdminPage() {
                       padding: '0.25rem 0.5rem',
                       borderRadius: '4px',
                       border: '1px solid #ccc',
-                      background: user.role === 'admin' ? '#ffeaa7' : 'white',
+                      background: user.role === 'admin' ? '#ffeaa7' : user.role === 'viewer' ? '#fff3cd' : 'white',
                     }}
                   >
                     <option value="user">User</option>
+                    <option value="viewer">Viewer</option>
                     <option value="admin">Admin</option>
                   </select>
                 </td>
