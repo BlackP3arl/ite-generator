@@ -71,15 +71,16 @@ export const authOptions = {
               },
             });
           } else {
-            // Create new user
-            await prisma.user.create({
+            // Create new user with ITE_VIEWER role (auto-provisioned)
+            const newUser = await prisma.user.create({
               data: {
                 email: user.email,
                 name: user.name,
                 azureId: profile.oid || profile.sub,
-                role: 'user', // Default role
+                role: 'ITE_VIEWER', // Auto-provisioned users get read-only access
               },
             });
+            console.log(`Auto-provisioned new user: ${newUser.email} with role: ITE_VIEWER`);
           }
         }
 

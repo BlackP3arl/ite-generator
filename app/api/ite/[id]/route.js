@@ -1,72 +1,63 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser, canAccessResource } from '../../../../lib/auth';
+import { canAccessITE } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 import { sanitizeFilename, validateFilePath, validateUploadedFile, verifyPDFFile } from '../../../../lib/fileUtils';
+import { canEditITE, canDeleteITE } from '../../../../lib/roles';
+import { createAuditLog } from '../../../../lib/auditLog';
 import fs from 'fs';
 import path from 'path';
 
 export async function GET(request, { params }) {
     try {
-        const user = await getCurrentUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         // Validate ID parameter
         const id = parseInt(params.id, 10);
         if (isNaN(id) || id < 1) {
             return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
         }
 
-        // Fetch with authorization filter to prevent IDOR
-        const ite = await prisma.iTE.findFirst({
-            where: {
-                id,
-                OR: [
-                    { userId: user.id },
-                    { user: { role: 'admin' } }
-                ]
-            }
-        });
+        // Check access permissions using new role system
+        const { allowed, user, ite } = await canAccessITE(id);
+
+        if (!allowed || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
 
         if (!ite) {
-            // Same response for not found and forbidden to prevent enumeration
             return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
 
         return NextResponse.json(ite);
     } catch (error) {
+        console.error('Error fetching ITE:', error);
         return NextResponse.json({ error: 'Failed to fetch ITE' }, { status: 500 });
     }
 }
 
 export async function PUT(request, { params }) {
     try {
-        const user = await getCurrentUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         // Validate ID parameter
         const id = parseInt(params.id, 10);
         if (isNaN(id) || id < 1) {
             return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
         }
 
-        // Fetch with authorization filter to prevent IDOR
-        const existingITE = await prisma.iTE.findFirst({
-            where: {
-                id,
-                OR: [
-                    { userId: user.id },
-                    { user: { role: 'admin' } }
-                ]
-            }
-        });
+        // Check access permissions
+        const { allowed, user, ite: existingITE } = await canAccessITE(id);
+
+        if (!allowed || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
 
         if (!existingITE) {
-            // Same response for not found and forbidden to prevent enumeration
             return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        }
+
+        // Check if user can edit this ITE
+        if (!canEditITE(user, existingITE)) {
+            return NextResponse.json(
+                { error: 'Forbidden: You do not have permission to edit this ITE' },
+                { status: 403 }
+            );
         }
         const formData = await request.formData();
         const comparisonData = JSON.parse(formData.get('comparisonData'));
@@ -168,9 +159,18 @@ export async function PUT(request, { params }) {
                 supplierFiles: JSON.stringify(supplierFiles),
                 itsFilePath: itsFilePath,
                 comments: comments,
-                acceptedCells: acceptedCells,  // Save accepted cells
+                acceptedCells: acceptedCells,
             },
         });
+
+        // Create audit log for update
+        await createAuditLog({
+            action: 'UPDATE',
+            iteId: id,
+            userId: user.id,
+            comment: 'ITE data updated',
+        });
+
         return NextResponse.json(updatedITE);
     } catch (error) {
         console.error('Error updating ITE:', error);
@@ -180,37 +180,48 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
     try {
-        const user = await getCurrentUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         // Validate ID parameter
         const id = parseInt(params.id, 10);
         if (isNaN(id) || id < 1) {
             return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
         }
 
-        // Fetch with authorization filter to prevent IDOR
-        const ite = await prisma.iTE.findFirst({
-            where: {
-                id,
-                OR: [
-                    { userId: user.id },
-                    { user: { role: 'admin' } }
-                ]
-            }
-        });
+        // Check access permissions
+        const { allowed, user, ite } = await canAccessITE(id);
+
+        if (!allowed || !user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
 
         if (!ite) {
-            // Same response for not found and forbidden to prevent enumeration
             return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
+
+        // Check if user can delete this ITE
+        if (!canDeleteITE(user, ite)) {
+            return NextResponse.json(
+                { error: 'Forbidden: You do not have permission to delete this ITE' },
+                { status: 403 }
+            );
+        }
         const uploadDir = path.join(process.cwd(), 'public', 'uploads', ite.iteNumber.replace('/', '_'));
+
+        // Create audit log before deletion
+        await createAuditLog({
+            action: 'DELETE',
+            iteId: id,
+            userId: user.id,
+            oldStatus: ite.status,
+            comment: `Deleted ITE: ${ite.iteNumber}`,
+            metadata: { iteNumber: ite.iteNumber }
+        });
+
+        // Delete ITE and files
         if (fs.existsSync(uploadDir)) {
             fs.rmSync(uploadDir, { recursive: true, force: true });
         }
         await prisma.iTE.delete({ where: { id } });
+
         return NextResponse.json({ success: true, message: 'ITE and files deleted successfully' });
     } catch (error) {
         console.error('Error deleting ITE:', error);

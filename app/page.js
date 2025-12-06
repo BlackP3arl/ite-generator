@@ -2,10 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signIn, signOut } from 'next-auth/react';
+import StatusBadge from './components/StatusBadge';
+import { getAvailableActions } from '../lib/roles';
 
 export default function Home() {
   const { data: session, status } = useSession();
   const [step, setStep] = useState(1);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [roleOverride, setRoleOverride] = useState(null); // For admin role testing
+  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const [itsFile, setItsFile] = useState(null);
   const [itsFields, setItsFields] = useState(null);
   const [itsMetadata, setItsMetadata] = useState({ itsNo: '', eprf: '', forUser: '' });
@@ -18,6 +23,7 @@ export default function Home() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [savedITEs, setSavedITEs] = useState([]);
   const [currentITEId, setCurrentITEId] = useState(null);
+  const [currentITE, setCurrentITE] = useState(null); // Track full ITE object with status
   const [showDashboard, setShowDashboard] = useState(true);
   const [viewingPdf, setViewingPdf] = useState(null);
   const [savedSupplierFiles, setSavedSupplierFiles] = useState([]);
@@ -28,10 +34,23 @@ export default function Home() {
   const itsInputRef = useRef(null);
   const supplierInputRef = useRef(null);
 
-  // Fetch ITEs on load
+  // Fetch ITEs and stats on load
   useEffect(() => {
     fetchITEs();
+    fetchDashboardStats();
   }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      const res = await fetch('/api/ite/stats');
+      if (res.ok) {
+        const data = await res.json();
+        setDashboardStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats', err);
+    }
+  };
 
   // Close context menu on click outside
   useEffect(() => {
@@ -63,6 +82,7 @@ export default function Home() {
     setComments(ite.comments || '');
     setAcceptedCells(JSON.parse(ite.acceptedCells || '{}'));  // Load accepted cells
     setCurrentITEId(ite.id);
+    setCurrentITE(ite); // Store full ITE object with status
     setStep(4);
     setShowDashboard(false);
   };
@@ -518,6 +538,37 @@ export default function Home() {
     }
   };
 
+  // Handle workflow actions
+  const handleWorkflowAction = async (action, comment = '') => {
+    if (!currentITEId) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/ite/${currentITEId}/workflow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, comment })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Update current ITE with new status
+        setCurrentITE(data.ite);
+        // Refresh ITE list
+        await fetchITEs();
+        alert(data.message || 'Workflow action completed successfully');
+      } else {
+        alert(data.error || 'Failed to perform workflow action');
+      }
+    } catch (err) {
+      console.error('Error performing workflow action:', err);
+      alert('Failed to perform workflow action');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Export ITE as PDF
   const exportPDF = async (e, iteId) => {
     e.stopPropagation();
@@ -573,6 +624,36 @@ export default function Home() {
     setShowDashboard(true);
   };
 
+  // Get effective user with role override for admin testing
+  const getEffectiveUser = () => {
+    if (!session?.user) return null;
+
+    // If admin is testing with a role override
+    if (session.user.role === 'ADMIN' && roleOverride) {
+      return {
+        ...session.user,
+        role: roleOverride,
+        _originalRole: 'ADMIN', // Keep track of original role
+        _isTesting: true
+      };
+    }
+
+    return session.user;
+  };
+
+  const effectiveUser = getEffectiveUser();
+
+  // Handle role switch
+  const handleRoleSwitch = (newRole) => {
+    if (session?.user?.role === 'ADMIN') {
+      setRoleOverride(newRole === 'ADMIN' ? null : newRole);
+      setShowRoleSwitcher(false);
+      // Refresh data with new role
+      fetchITEs();
+      fetchDashboardStats();
+    }
+  };
+
   return (
     <div className="container">
       <header className="header">
@@ -581,23 +662,103 @@ export default function Home() {
           <p>Automate Item Technical Evaluation document creation</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {status === 'authenticated' && session?.user && (
+          {status === 'authenticated' && session?.user && effectiveUser && (
             <>
               <span style={{ color: 'white', fontSize: '0.9rem' }}>
                 {session.user.name || session.user.email}
-                {session.user.role === 'admin' && (
-                  <span style={{ marginLeft: '0.5rem', background: '#ffeaa7', color: '#2d3436', padding: '0.125rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem' }}>
-                    ADMIN
+                {effectiveUser.role && (
+                  <span style={{
+                    marginLeft: '0.5rem',
+                    background: effectiveUser.role === 'ADMIN' ? '#ffeaa7' :
+                               effectiveUser.role === 'ITE_APPROVER' ? '#d1e7dd' :
+                               effectiveUser.role === 'ITE_REVIEWER' ? '#cff4fc' :
+                               effectiveUser.role === 'ITE_CREATOR' ? '#cfe2ff' : '#e9ecef',
+                    color: '#2d3436',
+                    padding: '0.125rem 0.5rem',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    cursor: session.user.role === 'ADMIN' ? 'pointer' : 'default',
+                    position: 'relative'
+                  }}
+                  onClick={() => session.user.role === 'ADMIN' && setShowRoleSwitcher(!showRoleSwitcher)}
+                  title={session.user.role === 'ADMIN' ? 'Click to switch roles (Admin Testing Mode)' : ''}
+                  >
+                    {effectiveUser._isTesting && '🧪 '}
+                    {effectiveUser.role === 'ITE_VIEWER' ? 'VIEWER' :
+                     effectiveUser.role === 'ITE_CREATOR' ? 'CREATOR' :
+                     effectiveUser.role === 'ITE_REVIEWER' ? 'REVIEWER' :
+                     effectiveUser.role === 'ITE_APPROVER' ? 'APPROVER' :
+                     effectiveUser.role}
+                    {session.user.role === 'ADMIN' && ' ▼'}
                   </span>
                 )}
               </span>
-              {session.user.role === 'admin' && (
+
+              {/* Role Switcher Dropdown for Admin */}
+              {showRoleSwitcher && session.user.role === 'ADMIN' && (
+                <div style={{
+                  position: 'absolute',
+                  top: '60px',
+                  right: '200px',
+                  background: 'white',
+                  border: '1px solid #ccc',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  padding: '0.5rem',
+                  zIndex: 1000,
+                  minWidth: '200px'
+                }}>
+                  <div style={{ padding: '0.5rem', fontWeight: 'bold', borderBottom: '1px solid #dee2e6', fontSize: '0.875rem', color: '#495057' }}>
+                    🧪 Test As Role:
+                  </div>
+                  {['ADMIN', 'ITE_CREATOR', 'ITE_REVIEWER', 'ITE_APPROVER', 'ITE_VIEWER'].map(role => (
+                    <button
+                      key={role}
+                      onClick={() => handleRoleSwitch(role)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: 'none',
+                        background: effectiveUser.role === role ? '#e7f3ff' : 'transparent',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                      onMouseEnter={(e) => e.target.style.background = '#f8f9fa'}
+                      onMouseLeave={(e) => e.target.style.background = effectiveUser.role === role ? '#e7f3ff' : 'transparent'}
+                    >
+                      <span style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        background: role === 'ADMIN' ? '#ffeaa7' :
+                                   role === 'ITE_APPROVER' ? '#d1e7dd' :
+                                   role === 'ITE_REVIEWER' ? '#cff4fc' :
+                                   role === 'ITE_CREATOR' ? '#cfe2ff' : '#e9ecef'
+                      }}></span>
+                      {role === 'ITE_VIEWER' ? 'Viewer' :
+                       role === 'ITE_CREATOR' ? 'Creator' :
+                       role === 'ITE_REVIEWER' ? 'Reviewer' :
+                       role === 'ITE_APPROVER' ? 'Approver' :
+                       'Admin (Real Role)'}
+                      {effectiveUser.role === role && ' ✓'}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {session.user.role === 'ADMIN' && (
                 <button
                   onClick={() => window.location.href = '/admin'}
                   className="btn btn-secondary"
-                  style={{ background: 'white', color: 'var(--color-primary)' }}
+                  style={{ background: 'white', color: 'var(--color-primary)', fontSize: '1.5rem', padding: '0.5rem 0.75rem' }}
+                  title="User Management & Settings"
                 >
-                  Admin Panel
+                  ⚙️
                 </button>
               )}
               <button
@@ -617,12 +778,42 @@ export default function Home() {
         <div className="card">
           <div className="dashboard-header">
             <div>
-              <h2 className="card-title">📂 Saved ITEs</h2>
+              <h2 className="card-title">📂 ITE Dashboard</h2>
               <div className="dashboard-stats">
                 <div className="stat-item">
                   <span className="stat-label">Total ITEs</span>
-                  <span className="stat-value">{savedITEs.length}</span>
+                  <span className="stat-value">{dashboardStats?.total || savedITEs.length}</span>
                 </div>
+                <div className="stat-item">
+                  <span className="stat-label">In Review</span>
+                  <span className="stat-value">{dashboardStats?.inReview || 0}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">In Approval</span>
+                  <span className="stat-value">{dashboardStats?.inApproval || 0}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Approved</span>
+                  <span className="stat-value">{dashboardStats?.approved || 0}</span>
+                </div>
+                {dashboardStats?.roleSpecific?.myITEs !== undefined && (
+                  <div className="stat-item">
+                    <span className="stat-label">My ITEs</span>
+                    <span className="stat-value">{dashboardStats.roleSpecific.myITEs}</span>
+                  </div>
+                )}
+                {dashboardStats?.roleSpecific?.pendingMyReview !== undefined && (
+                  <div className="stat-item">
+                    <span className="stat-label">Pending My Review</span>
+                    <span className="stat-value">{dashboardStats.roleSpecific.pendingMyReview}</span>
+                  </div>
+                )}
+                {dashboardStats?.roleSpecific?.pendingMyApproval !== undefined && (
+                  <div className="stat-item">
+                    <span className="stat-label">Pending My Approval</span>
+                    <span className="stat-value">{dashboardStats.roleSpecific.pendingMyApproval}</span>
+                  </div>
+                )}
               </div>
             </div>
             <button
@@ -631,6 +822,8 @@ export default function Home() {
                 resetWorkflow();
                 setShowDashboard(false);
               }}
+              disabled={effectiveUser?.role === 'ITE_VIEWER'}
+              title={effectiveUser?.role === 'ITE_VIEWER' ? 'Viewers cannot create ITEs' : 'Create new ITE'}
             >
               ✨ New ITE
             </button>
@@ -648,14 +841,20 @@ export default function Home() {
                 <thead>
                   <tr>
                     <th>ITE Number</th>
+                    <th>Status</th>
                     <th>Date</th>
                     <th>For</th>
                     <th>EPRF</th>
+                    <th>Creator</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {savedITEs.map((ite) => (
+                  {savedITEs.map((ite) => {
+                    const metadata = JSON.parse(ite.metadata || '{}');
+                    const availableActions = effectiveUser ? getAvailableActions(effectiveUser, ite) : ['view'];
+
+                    return (
                     <tr key={ite.id} className="ite-row">
                       <td
                         className="ite-number"
@@ -664,37 +863,48 @@ export default function Home() {
                       >
                         {ite.iteNumber}
                       </td>
+                      <td>
+                        <StatusBadge status={ite.status} />
+                      </td>
                       <td>{new Date(ite.createdAt).toLocaleDateString()}</td>
-                      <td>{JSON.parse(ite.metadata).forUser || '-'}</td>
-                      <td>{JSON.parse(ite.metadata).eprf || '-'}</td>
+                      <td>{metadata.forUser || '-'}</td>
+                      <td>{metadata.eprf || '-'}</td>
+                      <td>{ite.creator?.name || ite.creator?.email || '-'}</td>
                       <td className="ite-actions">
-                        <button
-                          className="action-btn btn-view"
-                          onClick={() => loadITE(ite)}
-                          title="View ITE"
-                        >
-                          👁️
-                        </button>
-                        <button
-                          className="action-btn btn-edit"
-                          onClick={() => {
-                            loadITE(ite);
-                            setIsEditMode(true);
-                          }}
-                          title="Modify ITE"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          className="action-btn btn-delete"
-                          onClick={(e) => deleteITE(e, ite.id)}
-                          title="Delete ITE"
-                        >
-                          🗑️
-                        </button>
+                        {availableActions.includes('view') && (
+                          <button
+                            className="action-btn btn-view"
+                            onClick={() => loadITE(ite)}
+                            title="View ITE"
+                          >
+                            👁️
+                          </button>
+                        )}
+                        {availableActions.includes('edit') && (
+                          <button
+                            className="action-btn btn-edit"
+                            onClick={() => {
+                              loadITE(ite);
+                              setIsEditMode(true);
+                            }}
+                            title="Modify ITE"
+                          >
+                            ✏️
+                          </button>
+                        )}
+                        {availableActions.includes('delete') && (
+                          <button
+                            className="action-btn btn-delete"
+                            onClick={(e) => deleteITE(e, ite.id)}
+                            title="Delete ITE"
+                          >
+                            🗑️
+                          </button>
+                        )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -935,6 +1145,151 @@ export default function Home() {
                 <h2 className="card-title">📊 Item Technical Evaluation</h2>
               </div>
 
+              {/* Workflow Status and Actions */}
+              {currentITE && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '1rem',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '8px',
+                  marginBottom: '1rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ fontWeight: 600, color: '#495057' }}>Status:</span>
+                    <StatusBadge status={currentITE.status} />
+                    {currentITE.status === 'APPROVED' && currentITE.approvedAt && (
+                      <span style={{ fontSize: '0.875rem', color: '#6c757d' }}>
+                        Approved on {new Date(currentITE.approvedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {/* Creator: Submit for Review */}
+                    {effectiveUser?.role === 'ITE_CREATOR' &&
+                     currentITE.creatorId === effectiveUser.id &&
+                     (currentITE.status === 'DRAFT' || currentITE.status === 'REJECTED') && (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => handleWorkflowAction('submit')}
+                        disabled={loading}
+                      >
+                        📤 Submit for Review
+                      </button>
+                    )}
+
+                    {/* Creator: Recall from Review */}
+                    {effectiveUser?.role === 'ITE_CREATOR' &&
+                     currentITE.creatorId === effectiveUser.id &&
+                     (currentITE.status === 'PENDING_REVIEW' || currentITE.status === 'IN_REVIEW') && (
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => handleWorkflowAction('recall')}
+                        disabled={loading}
+                      >
+                        ↩️ Recall
+                      </button>
+                    )}
+
+                    {/* Reviewer: Mark as Reviewed */}
+                    {effectiveUser?.role === 'ITE_REVIEWER' &&
+                     (currentITE.status === 'PENDING_REVIEW' || currentITE.status === 'IN_REVIEW') && (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => handleWorkflowAction('mark_reviewed')}
+                        disabled={loading}
+                      >
+                        ✅ Complete Review
+                      </button>
+                    )}
+
+                    {/* Approver: Approve or Reject */}
+                    {effectiveUser?.role === 'ITE_APPROVER' &&
+                     currentITE.status === 'PENDING_APPROVAL' && (
+                      <>
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => handleWorkflowAction('approve')}
+                          disabled={loading}
+                          style={{ backgroundColor: '#198754' }}
+                        >
+                          ✅ Approve
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => {
+                            const reason = prompt('Please provide a reason for rejection:');
+                            if (reason) handleWorkflowAction('reject', reason);
+                          }}
+                          disabled={loading}
+                          style={{ backgroundColor: '#dc3545', color: 'white' }}
+                        >
+                          ❌ Reject
+                        </button>
+                      </>
+                    )}
+
+                    {/* Admin has all actions */}
+                    {effectiveUser?.role === 'ADMIN' && (
+                      <>
+                        {currentITE.status === 'DRAFT' && (
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => handleWorkflowAction('submit')}
+                            disabled={loading}
+                          >
+                            📤 Submit for Review
+                          </button>
+                        )}
+                        {(currentITE.status === 'PENDING_REVIEW' || currentITE.status === 'IN_REVIEW') && (
+                          <>
+                            <button
+                              className="btn btn-secondary"
+                              onClick={() => handleWorkflowAction('recall')}
+                              disabled={loading}
+                            >
+                              ↩️ Recall
+                            </button>
+                            <button
+                              className="btn btn-primary"
+                              onClick={() => handleWorkflowAction('mark_reviewed')}
+                              disabled={loading}
+                            >
+                              ✅ Complete Review
+                            </button>
+                          </>
+                        )}
+                        {currentITE.status === 'PENDING_APPROVAL' && (
+                          <>
+                            <button
+                              className="btn btn-primary"
+                              onClick={() => handleWorkflowAction('approve')}
+                              disabled={loading}
+                              style={{ backgroundColor: '#198754' }}
+                            >
+                              ✅ Approve
+                            </button>
+                            <button
+                              className="btn btn-secondary"
+                              onClick={() => {
+                                const reason = prompt('Please provide a reason for rejection:');
+                                if (reason) handleWorkflowAction('reject', reason);
+                              }}
+                              disabled={loading}
+                              style={{ backgroundColor: '#dc3545', color: 'white' }}
+                            >
+                              ❌ Reject
+                            </button>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <div className="its-info" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                   <div className="its-info-item">
@@ -969,12 +1324,16 @@ export default function Home() {
                       📄 Export PDF
                     </button>
                   )}
-                  <button
-                    className={`btn ${isEditMode ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setIsEditMode(!isEditMode)}
-                  >
-                    {isEditMode ? '💾 Save Changes' : '✏️ Enable Edit Mode'}
-                  </button>
+                  {effectiveUser?.role !== 'ITE_VIEWER' &&
+                   (currentITE?.status !== 'APPROVED' || effectiveUser?.role === 'ADMIN') && (
+                    <button
+                      className={`btn ${isEditMode ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setIsEditMode(!isEditMode)}
+                      title={currentITE?.status === 'APPROVED' ? 'Approved ITEs cannot be edited' : ''}
+                    >
+                      {isEditMode ? '💾 Save Changes' : '✏️ Enable Edit Mode'}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1055,9 +1414,18 @@ export default function Home() {
                       {comparisonData.suppliers.map((s, idx) => (
                         <td
                           key={idx}
-                          style={{ cursor: 'pointer', textAlign: 'center' }}
-                          onClick={() => toggleRecommendation(idx)}
-                          title="Click to toggle recommendation"
+                          style={{
+                            cursor: (effectiveUser?.role !== 'ITE_VIEWER' &&
+                                    (currentITE?.status !== 'APPROVED' || effectiveUser?.role === 'ADMIN'))
+                                    ? 'pointer' : 'default',
+                            textAlign: 'center'
+                          }}
+                          onClick={(effectiveUser?.role !== 'ITE_VIEWER' &&
+                                   (currentITE?.status !== 'APPROVED' || effectiveUser?.role === 'ADMIN'))
+                                   ? () => toggleRecommendation(idx) : undefined}
+                          title={(effectiveUser?.role !== 'ITE_VIEWER' &&
+                                 (currentITE?.status !== 'APPROVED' || effectiveUser?.role === 'ADMIN'))
+                                 ? "Click to toggle recommendation" : "View only"}
                         >
                           {recommendations[idx] ? (
                             <span className="checkmark">✔</span>
@@ -1084,7 +1452,24 @@ export default function Home() {
                 <textarea
                   value={comments}
                   onChange={(e) => setComments(e.target.value)}
-                  placeholder="Enter justification for recommendations or any additional comments..."
+                  placeholder={
+                    (effectiveUser?.role === 'ITE_VIEWER' ||
+                     (currentITE?.status === 'APPROVED' && effectiveUser?.role !== 'ADMIN'))
+                    ? "View only - cannot edit comments"
+                    : "Enter justification for recommendations or any additional comments..."
+                  }
+                  disabled={
+                    effectiveUser?.role === 'ITE_VIEWER' ||
+                    (currentITE?.status === 'APPROVED' && effectiveUser?.role !== 'ADMIN')
+                  }
+                  style={{
+                    backgroundColor: (effectiveUser?.role === 'ITE_VIEWER' ||
+                                     (currentITE?.status === 'APPROVED' && effectiveUser?.role !== 'ADMIN'))
+                                     ? '#f5f5f5' : 'white',
+                    cursor: (effectiveUser?.role === 'ITE_VIEWER' ||
+                            (currentITE?.status === 'APPROVED' && effectiveUser?.role !== 'ADMIN'))
+                            ? 'not-allowed' : 'text'
+                  }}
                 />
               </div>
 

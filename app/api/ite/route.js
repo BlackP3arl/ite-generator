@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { sanitizeFilename, validateFilePath, validateUploadedFile, verifyPDFFile } from '../../../lib/fileUtils';
+import { ROLES, WORKFLOW_STATUS, canCreateITE, isAdmin, hasRole } from '../../../lib/roles';
+import { createAuditLog } from '../../../lib/auditLog';
 import fs from 'fs';
 import path from 'path';
 
@@ -13,11 +15,54 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Admins see all ITEs, users see only their own
-        const where = user.role === 'admin' ? {} : { userId: user.id };
+        // Different visibility based on role:
+        // - Admin & ITE_VIEWER: see all ITEs
+        // - ITE_CREATOR: see their own ITEs
+        // - ITE_REVIEWER: see ITEs in review states + assigned to them
+        // - ITE_APPROVER: see ITEs in approval state + assigned to them
+        let where = {};
+
+        if (isAdmin(user) || hasRole(user, ROLES.ITE_VIEWER)) {
+            // No filter - see all ITEs
+            where = {};
+        } else if (hasRole(user, ROLES.ITE_CREATOR)) {
+            // See only their own ITEs
+            where = { creatorId: user.id };
+        } else if (hasRole(user, ROLES.ITE_REVIEWER)) {
+            // See ITEs in review states or assigned to them
+            where = {
+                OR: [
+                    { reviewerId: user.id },
+                    {
+                        status: {
+                            in: [WORKFLOW_STATUS.PENDING_REVIEW, WORKFLOW_STATUS.IN_REVIEW]
+                        }
+                    }
+                ]
+            };
+        } else if (hasRole(user, ROLES.ITE_APPROVER)) {
+            // See ITEs in approval state or assigned to them
+            where = {
+                OR: [
+                    { approverId: user.id },
+                    { status: WORKFLOW_STATUS.PENDING_APPROVAL }
+                ]
+            };
+        }
 
         const ites = await prisma.iTE.findMany({
             where,
+            include: {
+                creator: {
+                    select: { id: true, name: true, email: true, role: true }
+                },
+                reviewer: {
+                    select: { id: true, name: true, email: true, role: true }
+                },
+                approver: {
+                    select: { id: true, name: true, email: true, role: true }
+                }
+            },
             orderBy: { createdAt: 'desc' },
         });
 
@@ -34,6 +79,14 @@ export async function POST(request) {
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Check if user can create ITEs
+        if (!canCreateITE(user)) {
+            return NextResponse.json(
+                { error: 'Forbidden: Only ITE Creators and Admins can create ITEs' },
+                { status: 403 }
+            );
         }
 
         const formData = await request.formData();
@@ -164,9 +217,20 @@ export async function POST(request) {
                 supplierFiles: JSON.stringify(supplierFiles),
                 itsFilePath: itsFilePath,
                 comments: comments || '',
-                acceptedCells: acceptedCells,  // Save accepted cells
-                userId: user.id, // Link ITE to user
+                acceptedCells: acceptedCells,
+                status: WORKFLOW_STATUS.DRAFT,
+                creatorId: user.id,
             },
+        });
+
+        // Create audit log for ITE creation
+        await createAuditLog({
+            action: 'CREATE',
+            iteId: newITE.id,
+            userId: user.id,
+            oldStatus: null,
+            newStatus: WORKFLOW_STATUS.DRAFT,
+            metadata: { iteNumber: newITE.iteNumber }
         });
 
         return NextResponse.json(newITE);

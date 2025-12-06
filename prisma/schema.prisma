@@ -8,25 +8,57 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Workflow Status Enum
+enum WorkflowStatus {
+  DRAFT
+  PENDING_REVIEW
+  IN_REVIEW
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+// User Role Enum
+enum UserRole {
+  ADMIN
+  ITE_CREATOR
+  ITE_REVIEWER
+  ITE_APPROVER
+  ITE_VIEWER
+}
+
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
   name          String?
   password      String?  // For email/password login (hashed)
   azureId       String?  @unique
-  role          String   @default("user") // user, admin
+  role          UserRole @default(ITE_VIEWER)  // Changed from String to Enum, default is VIEWER
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  ites          ITE[]
+
+  // Relations
+  createdITEs       ITE[]        @relation("CreatedITEs")
+  reviewingITEs     ITE[]        @relation("ReviewingITEs")
+  approvingITEs     ITE[]        @relation("ApprovingITEs")
+  auditLogs         AuditLog[]
 }
 
 model ITE {
-  id             Int      @id @default(autoincrement())
-  iteNumber      String   @unique // Format: "ITE YYYY/XXX"
-  year           Int      // To easily track running numbers per year
-  runningNumber  Int      // The XXX part
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id             Int            @id @default(autoincrement())
+  iteNumber      String         @unique // Format: "ITE-YYYY-XXX"
+  year           Int            // To easily track running numbers per year
+  runningNumber  Int            // The XXX part
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Workflow fields (NEW)
+  status         WorkflowStatus @default(DRAFT)
+  submittedAt    DateTime?      // When submitted for review
+  reviewedAt     DateTime?      // When marked as reviewed
+  approvedAt     DateTime?      // When approved
+  rejectedAt     DateTime?      // When rejected
+  rejectionReason String?       // Required comment on rejection
 
   // JSON fields to store the document structure
   metadata       String   // JSON string: { itsNo, eprf, forUser }
@@ -38,7 +70,46 @@ model ITE {
   comments       String?
   acceptedCells  String?  // JSON string: Manually accepted non-compliant cells
 
-  // User relationship
-  userId         String?
-  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // User relationships
+  creatorId      String?
+  creator        User?    @relation("CreatedITEs", fields: [creatorId], references: [id], onDelete: SetNull)
+
+  reviewerId     String?
+  reviewer       User?    @relation("ReviewingITEs", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  approverId     String?
+  approver       User?    @relation("ApprovingITEs", fields: [approverId], references: [id], onDelete: SetNull)
+
+  // Relations
+  auditLogs      AuditLog[]
+
+  @@index([status])
+  @@index([creatorId])
+  @@index([reviewerId])
+  @@index([approverId])
+}
+
+// New Audit Log Model
+model AuditLog {
+  id             Int            @id @default(autoincrement())
+  createdAt      DateTime       @default(now())
+
+  // What happened
+  action         String         // e.g., "SUBMIT", "RECALL", "APPROVE", "REJECT", "UPDATE"
+  oldStatus      WorkflowStatus?
+  newStatus      WorkflowStatus?
+  comment        String?        // For rejection reasons, etc.
+  metadata       String?        // JSON string for additional context
+
+  // Who did it
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // What ITE
+  iteId          Int
+  ite            ITE            @relation(fields: [iteId], references: [id], onDelete: Cascade)
+
+  @@index([iteId])
+  @@index([userId])
+  @@index([createdAt])
 }

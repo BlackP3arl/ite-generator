@@ -12,19 +12,21 @@ export default function AdminPage() {
     email: '',
     password: '',
     name: '',
-    role: 'user',
+    role: 'ITE_VIEWER',
   });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.role !== 'admin') {
+    if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
       router.push('/');
     }
   }, [session, status, router]);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.role === 'admin') {
+    if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
       fetchUsers();
     }
   }, [status, session]);
@@ -57,7 +59,7 @@ export default function AdminPage() {
 
       if (res.ok) {
         setMessage(data.message);
-        setFormData({ email: '', password: '', name: '', role: 'user' });
+        setFormData({ email: '', password: '', name: '', role: 'ITE_VIEWER' });
         setShowCreateForm(false);
         fetchUsers();
       } else {
@@ -93,20 +95,72 @@ export default function AdminPage() {
     return <div style={{ padding: '2rem' }}>Loading...</div>;
   }
 
-  if (status !== 'authenticated' || session?.user?.role !== 'admin') {
+  if (status !== 'authenticated' || session?.user?.role !== 'ADMIN') {
     return <div style={{ padding: '2rem' }}>Access Denied</div>;
   }
 
+  // Filter users based on search and role filter
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = searchTerm === '' ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+
+    return matchesSearch && matchesRole;
+  });
+
+  // Calculate role statistics
+  const roleStats = {
+    total: users.length,
+    ADMIN: users.filter(u => u.role === 'ADMIN').length,
+    ITE_CREATOR: users.filter(u => u.role === 'ITE_CREATOR').length,
+    ITE_REVIEWER: users.filter(u => u.role === 'ITE_REVIEWER').length,
+    ITE_APPROVER: users.filter(u => u.role === 'ITE_APPROVER').length,
+    ITE_VIEWER: users.filter(u => u.role === 'ITE_VIEWER').length,
+  };
+
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1>User Management</h1>
+        <div>
+          <h1 style={{ marginBottom: '0.5rem' }}>⚙️ User Management & Settings</h1>
+          <p style={{ color: '#6c757d', margin: 0 }}>Manage user accounts, roles, and permissions</p>
+        </div>
         <button
           onClick={() => router.push('/')}
           className="btn btn-secondary"
         >
-          Back to Dashboard
+          ← Back to Dashboard
         </button>
+      </div>
+
+      {/* Role Statistics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        <div style={{ background: 'white', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2d3748' }}>{roleStats.total}</div>
+          <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>Total Users</div>
+        </div>
+        <div style={{ background: '#ffeaa7', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2d3436' }}>{roleStats.ADMIN}</div>
+          <div style={{ fontSize: '0.875rem', color: '#2d3436' }}>Admins</div>
+        </div>
+        <div style={{ background: '#cfe2ff', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#084298' }}>{roleStats.ITE_CREATOR}</div>
+          <div style={{ fontSize: '0.875rem', color: '#084298' }}>Creators</div>
+        </div>
+        <div style={{ background: '#cff4fc', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#055160' }}>{roleStats.ITE_REVIEWER}</div>
+          <div style={{ fontSize: '0.875rem', color: '#055160' }}>Reviewers</div>
+        </div>
+        <div style={{ background: '#d1e7dd', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#0a3622' }}>{roleStats.ITE_APPROVER}</div>
+          <div style={{ fontSize: '0.875rem', color: '#0a3622' }}>Approvers</div>
+        </div>
+        <div style={{ background: '#e9ecef', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#495057' }}>{roleStats.ITE_VIEWER}</div>
+          <div style={{ fontSize: '0.875rem', color: '#495057' }}>Viewers</div>
+        </div>
       </div>
 
       {message && (
@@ -121,14 +175,58 @@ export default function AdminPage() {
         </div>
       )}
 
-      <div style={{ marginBottom: '2rem' }}>
+      {/* Search and Filter Controls */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ flex: '1', minWidth: '250px' }}>
+          <input
+            type="text"
+            placeholder="🔍 Search by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              fontSize: '1rem'
+            }}
+          />
+        </div>
+        <div style={{ minWidth: '200px' }}>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              fontSize: '1rem'
+            }}
+          >
+            <option value="all">All Roles ({users.length})</option>
+            <option value="ADMIN">Admins ({roleStats.ADMIN})</option>
+            <option value="ITE_CREATOR">Creators ({roleStats.ITE_CREATOR})</option>
+            <option value="ITE_REVIEWER">Reviewers ({roleStats.ITE_REVIEWER})</option>
+            <option value="ITE_APPROVER">Approvers ({roleStats.ITE_APPROVER})</option>
+            <option value="ITE_VIEWER">Viewers ({roleStats.ITE_VIEWER})</option>
+          </select>
+        </div>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
           className="btn btn-primary"
+          style={{ whiteSpace: 'nowrap' }}
         >
-          {showCreateForm ? 'Cancel' : '+ Create Email/Password User'}
+          {showCreateForm ? '✕ Cancel' : '+ Create User'}
         </button>
       </div>
+
+      {/* Results Count */}
+      {(searchTerm || roleFilter !== 'all') && (
+        <div style={{ marginBottom: '1rem', color: '#6c757d', fontSize: '0.9rem' }}>
+          Showing {filteredUsers.length} of {users.length} users
+        </div>
+      )}
 
       {showCreateForm && (
         <div style={{ background: '#f8f9fa', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem' }}>
@@ -182,8 +280,11 @@ export default function AdminPage() {
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
               >
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
+                <option value="ITE_VIEWER">ITE Viewer (Read-only)</option>
+                <option value="ITE_CREATOR">ITE Creator</option>
+                <option value="ITE_REVIEWER">ITE Reviewer</option>
+                <option value="ITE_APPROVER">ITE Approver</option>
+                <option value="ADMIN">Administrator</option>
               </select>
             </div>
 
@@ -207,7 +308,14 @@ export default function AdminPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {filteredUsers.length === 0 ? (
+              <tr>
+                <td colSpan="6" style={{ padding: '2rem', textAlign: 'center', color: '#6c757d' }}>
+                  No users found matching your search criteria
+                </td>
+              </tr>
+            ) : (
+              filteredUsers.map((user) => (
               <tr key={user.id} style={{ borderBottom: '1px solid #dee2e6' }}>
                 <td style={{ padding: '1rem' }}>{user.email}</td>
                 <td style={{ padding: '1rem' }}>{user.name || '-'}</td>
@@ -225,11 +333,17 @@ export default function AdminPage() {
                       padding: '0.25rem 0.5rem',
                       borderRadius: '4px',
                       border: '1px solid #ccc',
-                      background: user.role === 'admin' ? '#ffeaa7' : 'white',
+                      background: user.role === 'ADMIN' ? '#ffeaa7' :
+                                 user.role === 'ITE_APPROVER' ? '#d1e7dd' :
+                                 user.role === 'ITE_REVIEWER' ? '#cff4fc' :
+                                 user.role === 'ITE_CREATOR' ? '#cfe2ff' : 'white',
                     }}
                   >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
+                    <option value="ITE_VIEWER">ITE Viewer</option>
+                    <option value="ITE_CREATOR">ITE Creator</option>
+                    <option value="ITE_REVIEWER">ITE Reviewer</option>
+                    <option value="ITE_APPROVER">ITE Approver</option>
+                    <option value="ADMIN">Administrator</option>
                   </select>
                 </td>
                 <td style={{ padding: '1rem' }}>
@@ -262,7 +376,7 @@ export default function AdminPage() {
                   </button>
                 </td>
               </tr>
-            ))}
+            )))}
           </tbody>
         </table>
       </div>
