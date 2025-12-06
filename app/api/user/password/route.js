@@ -32,11 +32,20 @@ export async function POST(request) {
     // Only admins can set passwords
     await requireAdmin();
 
-    const { email, password, name } = await request.json();
+    const { email, password, name, role } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate role if provided
+    const validRoles = ['ADMIN', 'ITE_CREATOR', 'ITE_REVIEWER', 'ITE_APPROVER', 'ITE_VIEWER'];
+    if (role && !validRoles.includes(role)) {
+      return NextResponse.json(
+        { error: `Invalid role. Must be one of: ${validRoles.join(', ')}` },
         { status: 400 }
       );
     }
@@ -84,7 +93,7 @@ export async function POST(request) {
           email,
           password: hashedPassword,
           name: name || email.split('@')[0], // Use email prefix as default name
-          role: 'user', // Default role
+          role: role || 'ITE_VIEWER', // Default to ITE_VIEWER if not specified
         },
       });
 

@@ -39,9 +39,11 @@ export async function PUT(request) {
       );
     }
 
-    if (role !== 'user' && role !== 'admin') {
+    // Validate role matches UserRole enum
+    const validRoles = ['ADMIN', 'ITE_CREATOR', 'ITE_REVIEWER', 'ITE_APPROVER', 'ITE_VIEWER'];
+    if (!validRoles.includes(role)) {
       return NextResponse.json(
-        { error: 'Invalid role. Must be "user" or "admin"' },
+        { error: `Invalid role. Must be one of: ${validRoles.join(', ')}` },
         { status: 400 }
       );
     }
