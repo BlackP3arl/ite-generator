@@ -15,40 +15,10 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Different visibility based on role:
-        // - Admin & ITE_VIEWER: see all ITEs
-        // - ITE_CREATOR: see their own ITEs
-        // - ITE_REVIEWER: see ITEs in review states + assigned to them
-        // - ITE_APPROVER: see ITEs in approval state + assigned to them
+        // All roles can view all ITEs
+        // This allows everyone to search through and view the ITE list
+        // Individual ITE access is controlled by the detail endpoint
         let where = {};
-
-        if (isAdmin(user) || hasRole(user, ROLES.ITE_VIEWER)) {
-            // No filter - see all ITEs
-            where = {};
-        } else if (hasRole(user, ROLES.ITE_CREATOR)) {
-            // See only their own ITEs
-            where = { creatorId: user.id };
-        } else if (hasRole(user, ROLES.ITE_REVIEWER)) {
-            // See ITEs in review states or assigned to them
-            where = {
-                OR: [
-                    { reviewerId: user.id },
-                    {
-                        status: {
-                            in: [WORKFLOW_STATUS.PENDING_REVIEW, WORKFLOW_STATUS.IN_REVIEW]
-                        }
-                    }
-                ]
-            };
-        } else if (hasRole(user, ROLES.ITE_APPROVER)) {
-            // See ITEs in approval state or assigned to them
-            where = {
-                OR: [
-                    { approverId: user.id },
-                    { status: WORKFLOW_STATUS.PENDING_APPROVAL }
-                ]
-            };
-        }
 
         const ites = await prisma.iTE.findMany({
             where,

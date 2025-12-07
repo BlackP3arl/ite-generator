@@ -822,8 +822,12 @@ export default function Home() {
                 resetWorkflow();
                 setShowDashboard(false);
               }}
-              disabled={effectiveUser?.role === 'ITE_VIEWER'}
-              title={effectiveUser?.role === 'ITE_VIEWER' ? 'Viewers cannot create ITEs' : 'Create new ITE'}
+              disabled={effectiveUser?.role === 'ITE_VIEWER' || effectiveUser?.role === 'ITE_APPROVER'}
+              title={
+                effectiveUser?.role === 'ITE_VIEWER' ? 'Viewers cannot create ITEs' :
+                effectiveUser?.role === 'ITE_APPROVER' ? 'Approvers cannot create ITEs' :
+                'Create new ITE'
+              }
             >
               ✨ New ITE
             </button>
