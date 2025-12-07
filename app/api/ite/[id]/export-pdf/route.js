@@ -12,6 +12,9 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // All authenticated users can export ITEs (especially approved ones)
+    // No role-based restrictions on PDF export
+
     // Validate ID parameter
     const id = parseInt(params.id, 10);
     if (isNaN(id) || id < 1) {
@@ -20,7 +23,11 @@ export async function GET(request, { params }) {
 
     const ite = await prisma.iTE.findUnique({
       where: { id },
-      include: { user: true },
+      include: {
+        creator: {
+          select: { id: true, name: true, email: true }
+        }
+      },
     });
 
     if (!ite) {
