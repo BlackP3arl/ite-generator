@@ -1,1520 +1,190 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useSession, signIn, signOut } from 'next-auth/react';
-import StatusBadge from './components/StatusBadge';
-import { getAvailableActions } from '../lib/roles';
+import { useEffect } from 'react';
+import { useSession, signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const { data: session, status } = useSession();
-  const [step, setStep] = useState(1);
-  const [dashboardStats, setDashboardStats] = useState(null);
-  const [roleOverride, setRoleOverride] = useState(null); // For admin role testing
-  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
-  const [itsFile, setItsFile] = useState(null);
-  const [itsFields, setItsFields] = useState(null);
-  const [itsMetadata, setItsMetadata] = useState({ itsNo: '', eprf: '', forUser: '' });
-  const [supplierFiles, setSupplierFiles] = useState([]);
-  const [comparisonData, setComparisonData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [recommendations, setRecommendations] = useState({});
-  const [comments, setComments] = useState('');
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [savedITEs, setSavedITEs] = useState([]);
-  const [currentITEId, setCurrentITEId] = useState(null);
-  const [currentITE, setCurrentITE] = useState(null); // Track full ITE object with status
-  const [showDashboard, setShowDashboard] = useState(true);
-  const [viewingPdf, setViewingPdf] = useState(null);
-  const [savedSupplierFiles, setSavedSupplierFiles] = useState([]);
-  const [savedItsFilePath, setSavedItsFilePath] = useState(null);
-  const [acceptedCells, setAcceptedCells] = useState({});  // Track manually accepted cells
-  const [contextMenu, setContextMenu] = useState(null);  // Context menu state
+  const { status } = useSession();
+  const router = useRouter();
 
-  const itsInputRef = useRef(null);
-  const supplierInputRef = useRef(null);
-
-  // Fetch ITEs and stats on load
   useEffect(() => {
-    fetchITEs();
-    fetchDashboardStats();
-  }, []);
-
-  const fetchDashboardStats = async () => {
-    try {
-      const res = await fetch('/api/ite/stats');
-      if (res.ok) {
-        const data = await res.json();
-        setDashboardStats(data.stats);
-      }
-    } catch (err) {
-      console.error('Failed to fetch dashboard stats', err);
+    if (status === 'authenticated') {
+      // Redirect to dashboard if already logged in
+      router.push('/dashboard');
     }
-  };
+  }, [status, router]);
 
-  // Close context menu on click outside
-  useEffect(() => {
-    const handleClick = () => setContextMenu(null);
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
+  if (status === 'loading') {
+    return (
+      <div className="loading-screen">
+        <div className="spinner"></div>
+        <p className="loading-text">Loading...</p>
+      </div>
+    );
+  }
 
-  const fetchITEs = async () => {
-    try {
-      const res = await fetch('/api/ite');
-      if (res.ok) {
-        const data = await res.json();
-        setSavedITEs(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch ITEs', err);
-    }
-  };
+  if (status === 'authenticated') {
+    return null; // Will redirect
+  }
 
-  // Load an ITE
-  const loadITE = (ite) => {
-    setItsMetadata(JSON.parse(ite.metadata));
-    setItsFields(JSON.parse(ite.itsFields));
-    setComparisonData(JSON.parse(ite.comparisonData));
-    setRecommendations(JSON.parse(ite.recommendations));
-    setSavedSupplierFiles(JSON.parse(ite.supplierFiles || '[]'));
-    setSavedItsFilePath(ite.itsFilePath);
-    setComments(ite.comments || '');
-    setAcceptedCells(JSON.parse(ite.acceptedCells || '{}'));  // Load accepted cells
-    setCurrentITEId(ite.id);
-    setCurrentITE(ite); // Store full ITE object with status
-    setStep(4);
-    setShowDashboard(false);
-  };
+  return (
+    <div className="login-container">
+      <div className="login-card">
+        <div className="login-header">
+          <div className="login-icon">📋</div>
+          <h1 className="login-title">ITE Generator</h1>
+          <p className="login-subtitle">
+            Automate Item Technical Evaluation document creation
+          </p>
+        </div>
 
-  // Save ITE
-  const saveITE = async () => {
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('metadata', JSON.stringify(itsMetadata));
-      formData.append('itsFields', JSON.stringify(itsFields));
-      formData.append('comparisonData', JSON.stringify(comparisonData));
-      formData.append('recommendations', JSON.stringify(recommendations));
-      formData.append('acceptedCells', JSON.stringify(acceptedCells));  // Save accepted cells
-      formData.append('comments', comments);
+        <div className="login-content">
+          <p className="login-description">
+            Welcome to the Item Technical Evaluation system. This application helps you
+            create, review, and manage technical evaluations efficiently.
+          </p>
 
-      if (itsFile) {
-        formData.append('itsFile', itsFile);
-      }
+          <button
+            onClick={() => signIn()}
+            className="btn btn-primary btn-large"
+          >
+            Sign In to Continue
+          </button>
 
-      // Append new supplier files if any
-      supplierFiles.forEach((file, index) => {
-        if (file instanceof File) {
-          formData.append(`supplierFile${index}`, file);
-        }
-      });
+          <div className="login-features">
+            <div className="feature-item">
+              <span className="feature-icon">✨</span>
+              <span className="feature-text">Automated Document Generation</span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-icon">🔄</span>
+              <span className="feature-text">Workflow Management</span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-icon">👥</span>
+              <span className="feature-text">Role-Based Access Control</span>
+            </div>
+            <div className="feature-item">
+              <span className="feature-icon">📊</span>
+              <span className="feature-text">Comprehensive Reporting</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      let url = '/api/ite';
-      let method = 'POST';
-
-      if (currentITEId) {
-        url = `/api/ite/${currentITEId}`;
-        method = 'PUT';
-      }
-
-      const res = await fetch(url, {
-        method,
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error('Failed to save ITE');
-
-      const savedData = await res.json();
-      setCurrentITEId(savedData.id);
-
-      // Update metadata with generated ITE number if it's new
-      if (!currentITEId) {
-        setItsMetadata(prev => ({ ...prev, itsNo: savedData.iteNumber }));
-        alert(`Saved successfully as ${savedData.iteNumber}`);
-      } else {
-        alert('Changes saved successfully');
-      }
-
-      fetchITEs(); // Refresh list
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle cell edit
-  const handleCellEdit = (rowIdx, supplierIdx, value) => {
-    const newData = { ...comparisonData };
-    newData.comparison[rowIdx].suppliers[supplierIdx].value = value;
-    setComparisonData(newData);
-  };
-
-  // Step 1: Handle ITS file upload
-  const handleItsUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setItsFile(file);
-    setError(null);
-    setLoading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/extract-its', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to extract ITS specifications');
-      }
-
-      const data = await response.json();
-      setItsFields(data.fields);
-      setItsMetadata(data.metadata || { itsNo: '', eprf: '', forUser: '' });
-      setStep(2);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 2: Handle field updates
-  const handleFieldChange = (index, field, value) => {
-    const updated = [...itsFields];
-    updated[index] = { ...updated[index], [field]: value };
-    setItsFields(updated);
-  };
-
-  const handleMetadataChange = (field, value) => {
-    setItsMetadata({ ...itsMetadata, [field]: value });
-  };
-
-  const addField = () => {
-    setItsFields([...itsFields, { feature: '', specification: '' }]);
-  };
-
-  const removeField = (index) => {
-    setItsFields(itsFields.filter((_, i) => i !== index));
-  };
-
-  const confirmItsFields = () => {
-    setStep(3);
-  };
-
-  // Step 3: Handle supplier file uploads
-  const handleSupplierUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const newFiles = files.slice(0, 4 - supplierFiles.length);
-    setSupplierFiles([...supplierFiles, ...newFiles]);
-  };
-
-  const removeSupplierFile = (index) => {
-    setSupplierFiles(supplierFiles.filter((_, i) => i !== index));
-  };
-
-  // Step 4: Generate comparison
-  const generateComparison = async () => {
-    if (supplierFiles.length === 0) {
-      setError('Please upload at least one supplier quotation');
-      return;
-    }
-
-    setError(null);
-    setLoading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('itsFields', JSON.stringify(itsFields));
-      supplierFiles.forEach((file, index) => {
-        formData.append(`supplier${index}`, file);
-      });
-
-      const response = await fetch('/api/extract-quotes', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to extract supplier quotations');
-      }
-
-      const data = await response.json();
-      setComparisonData(data);
-
-      // Initialize recommendations
-      const recs = {};
-      data.suppliers.forEach((_, idx) => {
-        recs[idx] = data.suppliers[idx].autoRecommend ? true : null;
-      });
-      setRecommendations(recs);
-
-      setStep(4);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Toggle recommendation
-  const toggleRecommendation = (supplierIndex) => {
-    setRecommendations({
-      ...recommendations,
-      [supplierIndex]: recommendations[supplierIndex] ? null : true,
-    });
-  };
-
-  // Get cell status class (updated to handle accepted cells)
-  const getCellClass = (status, rowIdx, cellIdx) => {
-    const cellKey = `${rowIdx}-${cellIdx}`;
-    if (acceptedCells[cellKey]) {
-      return 'cell-accepted';  // Special class for manually accepted cells
-    }
-    switch (status) {
-      case 'compliant': return 'cell-compliant';
-      case 'warning': return 'cell-warning';
-      case 'error': return 'cell-error';
-      case 'na': return 'cell-na';
-      default: return '';
-    }
-  };
-
-  // Handle right-click on cells
-  const handleCellRightClick = (e, rowIdx, cellIdx, status) => {
-    // Only show context menu for error (red) cells that aren't already accepted
-    const cellKey = `${rowIdx}-${cellIdx}`;
-    if (status === 'error' && !acceptedCells[cellKey]) {
-      e.preventDefault();
-      setContextMenu({
-        x: e.pageX,
-        y: e.pageY,
-        rowIdx,
-        cellIdx,
-      });
-    }
-  };
-
-  // Mark cell as accepted
-  const markCellAsAccepted = () => {
-    if (contextMenu) {
-      const cellKey = `${contextMenu.rowIdx}-${contextMenu.cellIdx}`;
-      setAcceptedCells({
-        ...acceptedCells,
-        [cellKey]: {
-          acceptedBy: session?.user?.email || 'Unknown',
-          acceptedAt: new Date().toISOString(),
-          acceptedByName: session?.user?.name || session?.user?.email || 'Unknown',
-        },
-      });
-      setContextMenu(null);
-    }
-  };
-
-  // Export as HTML
-  const exportHTML = () => {
-    const tableHTML = document.getElementById('comparison-table').outerHTML;
-    const styles = `
-      <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-        th { background: #f1f5f9; }
-        th:first-child { background: #1a365d; color: white; }
-        .cell-compliant { background: #ecfdf5; }
-        .cell-warning { background: #fffbeb; color: #92400e; }
-        .cell-error, .cell-na { background: #fef2f2; color: #ef4444; }
-        .checkmark { color: #10b981; font-size: 1.25em; }
-        .pending { color: #f59e0b; }
-        h1 { color: #1a365d; }
-        .meta { margin-bottom: 20px; }
-        .meta span { margin-right: 30px; }
-        .comments { margin-top: 20px; padding: 15px; background: #f7fafc; border-radius: 5px; }
-        .cell-input { 
-          width: 100%; 
-          padding: 4px; 
-          border: 1px solid #ccc; 
-          border-radius: 4px; 
-          font-family: inherit;
-          font-size: inherit;
-          resize: vertical;
-        }
-        .ite-table-container {
-          overflow-x: auto;
-          background: white;
-          border-radius: 0.5rem;
-          border: 1px solid #e2e8f0;
-        }
-        .ite-list-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        .ite-list-table th {
-          padding: 1rem 1.5rem;
-          text-align: left;
-          background-color: white;
-          border-bottom: 1px solid #e2e8f0;
-          color: #1a202c;
-          font-weight: 600;
-          font-size: 0.875rem;
-        }
-        .ite-list-table td {
-          padding: 1.25rem 1.5rem;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-          color: #4a5568;
-          font-size: 0.95rem;
-        }
-        .ite-row:last-child td {
-          border-bottom: none;
-        }
-        .ite-row:hover {
-          background-color: #f8fafc;
-        }
-        .ite-number {
-          font-weight: 500;
-          color: #3182ce !important;
-          cursor: pointer;
-          text-decoration: none;
-        }
-        .ite-number:hover {
-          text-decoration: underline;
-        }
-        .ite-actions {
+      <style jsx>{`
+        .loading-screen {
           display: flex;
-          gap: 0.75rem;
-        }
-        .action-btn {
-          border: none;
-          background: #edf2f7;
-          cursor: pointer;
-          font-size: 1rem;
-          padding: 0.4rem 0.6rem;
-          border-radius: 0.375rem;
-          transition: all 0.2s;
-          color: #4a5568;
-        }
-        .action-btn:hover {
-          background-color: #e2e8f0;
-        }
-        .btn-view:hover { color: #3182ce; background-color: #ebf8ff; }
-        .btn-edit:hover { color: #d69e2e; background-color: #fffff0; }
-        .btn-delete:hover { color: #e53e3e; background-color: #fff5f5; }
-        .ite-item-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 0.5rem; color: #2d3748; }
-        .ite-item-details { display: flex; gap: 1rem; color: #718096; font-size: 0.875rem; }
-        
-        .btn-xs {
-          padding: 0.25rem 0.5rem;
-          font-size: 0.75rem;
-          border-radius: 0.25rem;
-          background: #edf2f7;
-          color: #4a5568;
-          border: 1px solid #cbd5e0;
-          cursor: pointer;
-        }
-        .btn-xs:hover { background: #e2e8f0; }
-        .card-header-actions {
-          display: flex;
-          justify-content: space-between;
+          flex-direction: column;
           align-items: center;
-          margin-bottom: 1.5rem;
+          justify-content: center;
+          min-height: 100vh;
+          background: var(--color-bg);
         }
-        .step-dashboard-btn {
-          background: none;
-          border: 1px solid #cbd5e0;
-          border-radius: 0.5rem;
-          width: auto;
-          padding: 0 1rem;
-          height: 32px;
+
+        .login-container {
+          min-height: 100vh;
           display: flex;
           align-items: center;
           justify-content: center;
-          cursor: pointer;
-          font-size: 0.9rem;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          padding: 2rem;
+        }
+
+        .login-card {
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          max-width: 480px;
+          width: 100%;
+          overflow: hidden;
+        }
+
+        .login-header {
+          background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+          color: white;
+          padding: 3rem 2rem;
+          text-align: center;
+        }
+
+        .login-icon {
+          font-size: 4rem;
+          margin-bottom: 1rem;
+        }
+
+        .login-title {
+          font-size: 2rem;
+          font-weight: 700;
+          margin-bottom: 0.5rem;
+        }
+
+        .login-subtitle {
+          font-size: 1rem;
+          opacity: 0.9;
+        }
+
+        .login-content {
+          padding: 2.5rem 2rem;
+        }
+
+        .login-description {
+          color: var(--color-text-secondary);
+          line-height: 1.6;
+          margin-bottom: 2rem;
+          text-align: center;
+        }
+
+        .btn-large {
+          width: 100%;
+          padding: 1rem 2rem;
+          font-size: 1.1rem;
+          margin-bottom: 2rem;
+        }
+
+        .login-features {
+          border-top: 1px solid var(--color-border);
+          padding-top: 1.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .feature-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          color: var(--color-text);
+        }
+
+        .feature-icon {
+          font-size: 1.5rem;
+          line-height: 1;
+        }
+
+        .feature-text {
+          font-size: 0.95rem;
           font-weight: 500;
-          margin-right: 1rem;
-          transition: all 0.2s;
         }
-        .step-dashboard-btn:hover {
-          background: #edf2f7;
-          border-color: #a0aec0;
-        }
-      </style>
-    `;
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Item Technical Evaluation - ${itsMetadata.itsNo}</title>
-        ${styles}
-      </head>
-      <body>
-        <h1>Item Technical Evaluation</h1>
-        <div class="meta">
-          <span><strong>ITS No:</strong> ${itsMetadata.itsNo}</span>
-          <span><strong>EPRF:</strong> ${itsMetadata.eprf}</span>
-          <span><strong>For:</strong> ${itsMetadata.forUser}</span>
-          <span><strong>Date:</strong> ${new Date().toLocaleDateString()}</span>
-        </div>
-        ${tableHTML}
-        ${comments ? `<div class="comments"><strong>Recommendation Reason:</strong><br/>${comments}</div>` : ''}
-        <p style="color: #666; font-size: 0.9em; margin-top: 20px;">
-          *Fields highlighted in RED do not meet the ITS specification
-        </p>
-      </body>
-      </html>
-    `;
+        @media (max-width: 640px) {
+          .login-container {
+            padding: 1rem;
+          }
 
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ITE_${itsMetadata.itsNo || 'export'}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+          .login-header {
+            padding: 2rem 1.5rem;
+          }
 
-  // View PDF
-  const viewPdf = (index) => {
-    let url = null;
-    // If we have a new file uploaded in this session, use it
-    if (supplierFiles[index] && supplierFiles[index] instanceof File) {
-      url = URL.createObjectURL(supplierFiles[index]);
-    }
-    // If we have a saved file URL, use it
-    else if (savedSupplierFiles[index]) {
-      url = savedSupplierFiles[index];
-    }
+          .login-content {
+            padding: 2rem 1.5rem;
+          }
 
-    if (url) {
-      window.open(url, '_blank', 'width=1000,height=800');
-    } else {
-      alert('No PDF available for this supplier');
-    }
-  };
-
-  const viewItsPdf = () => {
-    let url = null;
-    if (itsFile) {
-      url = URL.createObjectURL(itsFile);
-    } else if (savedItsFilePath) {
-      url = savedItsFilePath;
-    }
-
-    if (url) {
-      window.open(url, '_blank', 'width=1000,height=800');
-    } else {
-      alert('No ITS PDF available');
-    }
-  };
-
-  // Delete ITE
-  const deleteITE = async (e, iteId) => {
-    e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this ITE?')) return;
-
-    try {
-      const res = await fetch(`/api/ite/${iteId}`, {
-        method: 'DELETE',
-      });
-
-      if (res.ok) {
-        await fetchITEs();
-        if (currentITEId === iteId) {
-          resetWorkflow();
-        }
-      } else {
-        alert('Failed to delete ITE');
-      }
-    } catch (err) {
-      console.error('Error deleting ITE:', err);
-      alert('Failed to delete ITE');
-    }
-  };
-
-  // Handle workflow actions
-  const handleWorkflowAction = async (action, comment = '') => {
-    if (!currentITEId) return;
-
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/ite/${currentITEId}/workflow`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, comment })
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        // Update current ITE with new status
-        setCurrentITE(data.ite);
-        // Refresh ITE list
-        await fetchITEs();
-        alert(data.message || 'Workflow action completed successfully');
-      } else {
-        alert(data.error || 'Failed to perform workflow action');
-      }
-    } catch (err) {
-      console.error('Error performing workflow action:', err);
-      alert('Failed to perform workflow action');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Export ITE as PDF
-  const exportPDF = async (e, iteId) => {
-    e.stopPropagation();
-    try {
-      const res = await fetch(`/api/ite/${iteId}/export-pdf`);
-
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-
-        // Extract filename from Content-Disposition header
-        const contentDisposition = res.headers.get('Content-Disposition');
-        let filename = `ITE-${iteId}.pdf`; // fallback filename
-
-        if (contentDisposition) {
-          const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-          if (filenameMatch && filenameMatch[1]) {
-            filename = filenameMatch[1];
+          .login-title {
+            font-size: 1.75rem;
           }
         }
-
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        alert('Failed to export PDF');
-      }
-    } catch (err) {
-      console.error('Error exporting PDF:', err);
-      alert('Failed to export PDF');
-    }
-  };
-
-  // Reset workflow
-  const resetWorkflow = () => {
-    setStep(1);
-    setItsFile(null);
-    setItsFields(null);
-    setItsMetadata({ itsNo: '', eprf: '', forUser: '' });
-    setSupplierFiles([]);
-    setComparisonData(null);
-    setRecommendations({});
-    setComments('');
-    setError(null);
-    setCurrentITEId(null);
-    setViewingPdf(null);
-    setSavedSupplierFiles([]);
-    setSavedItsFilePath(null);
-    setShowDashboard(true);
-  };
-
-  // Get effective user with role override for admin testing
-  const getEffectiveUser = () => {
-    if (!session?.user) return null;
-
-    // If admin is testing with a role override
-    if (session.user.role === 'ADMIN' && roleOverride) {
-      return {
-        ...session.user,
-        role: roleOverride,
-        _originalRole: 'ADMIN', // Keep track of original role
-        _isTesting: true
-      };
-    }
-
-    return session.user;
-  };
-
-  const effectiveUser = getEffectiveUser();
-
-  // Handle role switch
-  const handleRoleSwitch = (newRole) => {
-    if (session?.user?.role === 'ADMIN') {
-      setRoleOverride(newRole === 'ADMIN' ? null : newRole);
-      setShowRoleSwitcher(false);
-      // Refresh data with new role
-      fetchITEs();
-      fetchDashboardStats();
-    }
-  };
-
-  return (
-    <div className="container">
-      <header className="header">
-        <div>
-          <h1>📋 ITE Generator</h1>
-          <p>Automate Item Technical Evaluation document creation</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {status === 'authenticated' && session?.user && effectiveUser && (
-            <>
-              <span style={{ color: 'white', fontSize: '0.9rem' }}>
-                {session.user.name || session.user.email}
-                {effectiveUser.role && (
-                  <span style={{
-                    marginLeft: '0.5rem',
-                    background: effectiveUser.role === 'ADMIN' ? '#ffeaa7' :
-                               effectiveUser.role === 'ITE_APPROVER' ? '#d1e7dd' :
-                               effectiveUser.role === 'ITE_REVIEWER' ? '#cff4fc' :
-                               effectiveUser.role === 'ITE_CREATOR' ? '#cfe2ff' : '#e9ecef',
-                    color: '#2d3436',
-                    padding: '0.125rem 0.5rem',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    cursor: session.user.role === 'ADMIN' ? 'pointer' : 'default',
-                    position: 'relative'
-                  }}
-                  onClick={() => session.user.role === 'ADMIN' && setShowRoleSwitcher(!showRoleSwitcher)}
-                  title={session.user.role === 'ADMIN' ? 'Click to switch roles (Admin Testing Mode)' : ''}
-                  >
-                    {effectiveUser._isTesting && '🧪 '}
-                    {effectiveUser.role === 'ITE_VIEWER' ? 'VIEWER' :
-                     effectiveUser.role === 'ITE_CREATOR' ? 'CREATOR' :
-                     effectiveUser.role === 'ITE_REVIEWER' ? 'REVIEWER' :
-                     effectiveUser.role === 'ITE_APPROVER' ? 'APPROVER' :
-                     effectiveUser.role}
-                    {session.user.role === 'ADMIN' && ' ▼'}
-                  </span>
-                )}
-              </span>
-
-              {/* Role Switcher Dropdown for Admin */}
-              {showRoleSwitcher && session.user.role === 'ADMIN' && (
-                <div style={{
-                  position: 'absolute',
-                  top: '60px',
-                  right: '200px',
-                  background: 'white',
-                  border: '1px solid #ccc',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  padding: '0.5rem',
-                  zIndex: 1000,
-                  minWidth: '200px'
-                }}>
-                  <div style={{ padding: '0.5rem', fontWeight: 'bold', borderBottom: '1px solid #dee2e6', fontSize: '0.875rem', color: '#495057' }}>
-                    🧪 Test As Role:
-                  </div>
-                  {['ADMIN', 'ITE_CREATOR', 'ITE_REVIEWER', 'ITE_APPROVER', 'ITE_VIEWER'].map(role => (
-                    <button
-                      key={role}
-                      onClick={() => handleRoleSwitch(role)}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        border: 'none',
-                        background: effectiveUser.role === role ? '#e7f3ff' : 'transparent',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        borderRadius: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}
-                      onMouseEnter={(e) => e.target.style.background = '#f8f9fa'}
-                      onMouseLeave={(e) => e.target.style.background = effectiveUser.role === role ? '#e7f3ff' : 'transparent'}
-                    >
-                      <span style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        background: role === 'ADMIN' ? '#ffeaa7' :
-                                   role === 'ITE_APPROVER' ? '#d1e7dd' :
-                                   role === 'ITE_REVIEWER' ? '#cff4fc' :
-                                   role === 'ITE_CREATOR' ? '#cfe2ff' : '#e9ecef'
-                      }}></span>
-                      {role === 'ITE_VIEWER' ? 'Viewer' :
-                       role === 'ITE_CREATOR' ? 'Creator' :
-                       role === 'ITE_REVIEWER' ? 'Reviewer' :
-                       role === 'ITE_APPROVER' ? 'Approver' :
-                       'Admin (Real Role)'}
-                      {effectiveUser.role === role && ' ✓'}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {session.user.role === 'ADMIN' && (
-                <button
-                  onClick={() => window.location.href = '/admin'}
-                  className="btn btn-secondary"
-                  style={{ background: 'white', color: 'var(--color-primary)', fontSize: '1.5rem', padding: '0.5rem 0.75rem' }}
-                  title="User Management & Settings"
-                >
-                  ⚙️
-                </button>
-              )}
-              <button
-                onClick={() => signOut()}
-                className="btn btn-secondary"
-                style={{ background: 'white', color: 'var(--color-primary)' }}
-              >
-                Sign Out
-              </button>
-            </>
-          )}
-        </div>
-      </header>
-
-      {/* Dashboard View */}
-      {showDashboard ? (
-        <div className="card">
-          <div className="dashboard-header">
-            <div>
-              <h2 className="card-title">📂 ITE Dashboard</h2>
-              <div className="dashboard-stats">
-                <div className="stat-item">
-                  <span className="stat-label">Total ITEs</span>
-                  <span className="stat-value">{dashboardStats?.total || savedITEs.length}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-label">In Review</span>
-                  <span className="stat-value">{dashboardStats?.inReview || 0}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-label">In Approval</span>
-                  <span className="stat-value">{dashboardStats?.inApproval || 0}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-label">Approved</span>
-                  <span className="stat-value">{dashboardStats?.approved || 0}</span>
-                </div>
-                {dashboardStats?.roleSpecific?.myITEs !== undefined && (
-                  <div className="stat-item">
-                    <span className="stat-label">My ITEs</span>
-                    <span className="stat-value">{dashboardStats.roleSpecific.myITEs}</span>
-                  </div>
-                )}
-                {dashboardStats?.roleSpecific?.pendingMyReview !== undefined && (
-                  <div className="stat-item">
-                    <span className="stat-label">Pending My Review</span>
-                    <span className="stat-value">{dashboardStats.roleSpecific.pendingMyReview}</span>
-                  </div>
-                )}
-                {dashboardStats?.roleSpecific?.pendingMyApproval !== undefined && (
-                  <div className="stat-item">
-                    <span className="stat-label">Pending My Approval</span>
-                    <span className="stat-value">{dashboardStats.roleSpecific.pendingMyApproval}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                resetWorkflow();
-                setShowDashboard(false);
-              }}
-              disabled={effectiveUser?.role === 'ITE_VIEWER' || effectiveUser?.role === 'ITE_APPROVER'}
-              title={
-                effectiveUser?.role === 'ITE_VIEWER' ? 'Viewers cannot create ITEs' :
-                effectiveUser?.role === 'ITE_APPROVER' ? 'Approvers cannot create ITEs' :
-                'Create new ITE'
-              }
-            >
-              ✨ New ITE
-            </button>
-          </div>
-
-          {savedITEs.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">📋</div>
-              <div className="empty-state-text">No ITEs created yet</div>
-              <div className="empty-state-hint">Create your first Item Technical Evaluation to get started</div>
-            </div>
-          ) : (
-            <div className="ite-table-container">
-              <table className="ite-list-table">
-                <thead>
-                  <tr>
-                    <th>ITE Number</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>For</th>
-                    <th>EPRF</th>
-                    <th>Creator</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {savedITEs.map((ite) => {
-                    const metadata = JSON.parse(ite.metadata || '{}');
-                    const availableActions = effectiveUser ? getAvailableActions(effectiveUser, ite) : ['view'];
-
-                    return (
-                    <tr key={ite.id} className="ite-row">
-                      <td
-                        className="ite-number"
-                        onClick={() => loadITE(ite)}
-                        title="Click to open"
-                      >
-                        {ite.iteNumber}
-                      </td>
-                      <td>
-                        <StatusBadge status={ite.status} />
-                      </td>
-                      <td>{new Date(ite.createdAt).toLocaleDateString()}</td>
-                      <td>{metadata.forUser || '-'}</td>
-                      <td>{metadata.eprf || '-'}</td>
-                      <td>{ite.creator?.name || ite.creator?.email || '-'}</td>
-                      <td className="ite-actions">
-                        {availableActions.includes('view') && (
-                          <button
-                            className="action-btn btn-view"
-                            onClick={() => loadITE(ite)}
-                            title="View ITE"
-                          >
-                            👁️
-                          </button>
-                        )}
-                        {availableActions.includes('edit') && (
-                          <button
-                            className="action-btn btn-edit"
-                            onClick={() => {
-                              loadITE(ite);
-                              setIsEditMode(true);
-                            }}
-                            title="Modify ITE"
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        {availableActions.includes('delete') && (
-                          <button
-                            className="action-btn btn-delete"
-                            onClick={(e) => deleteITE(e, ite.id)}
-                            title="Delete ITE"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Steps indicator */}
-          <div className="steps">
-            <button
-              className="step-dashboard-btn"
-              onClick={() => {
-                resetWorkflow();
-                setShowDashboard(true);
-              }}
-              title="Back to Dashboard"
-            >
-              🏠 Dashboard
-            </button>
-            <div className={`step ${step === 1 ? 'active' : step > 1 ? 'completed' : ''}`}>
-              <span className="step-number">{step > 1 ? '✓' : '1'}</span>
-              Upload ITS
-            </div>
-            <div className={`step ${step === 2 ? 'active' : step > 2 ? 'completed' : ''}`}>
-              <span className="step-number">{step > 2 ? '✓' : '2'}</span>
-              Confirm Specs
-            </div>
-            <div className={`step ${step === 3 ? 'active' : step > 3 ? 'completed' : ''}`}>
-              <span className="step-number">{step > 3 ? '✓' : '3'}</span>
-              Upload Quotes
-            </div>
-            <div className={`step ${step === 4 ? 'active' : ''}`}>
-              <span className="step-number">4</span>
-              Review ITE
-            </div>
-          </div>
-
-          {/* Error display */}
-          {error && (
-            <div className="alert alert-error">
-              <span>⚠️</span>
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Step 1: Upload ITS */}
-          {step === 1 && (
-            <div className="card">
-              <h2 className="card-title">📄 Upload Item Technical Specification</h2>
-              <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
-                Upload the ITS document in PDF format. The system will extract the specifications automatically.
-              </p>
-
-              {loading ? (
-                <div className="loading">
-                  <div className="spinner"></div>
-                  <p className="loading-text">Extracting ITS specifications...</p>
-                </div>
-              ) : (
-                <div
-                  className="upload-zone"
-                  onClick={() => itsInputRef.current?.click()}
-                >
-                  <input
-                    ref={itsInputRef}
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleItsUpload}
-                  />
-                  <div className="upload-icon">📑</div>
-                  <p className="upload-text">Click to upload ITS document</p>
-                  <p className="upload-hint">PDF format only</p>
-                </div>
-              )}
-
-              {itsFile && !loading && (
-                <div className="file-list">
-                  <div className="file-item">
-                    <div className="file-info">
-                      <span className="file-icon">📄</span>
-                      <span className="file-name">{itsFile.name}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 2: Confirm ITS fields */}
-          {step === 2 && itsFields && (
-            <div className="card">
-              <h2 className="card-title">✏️ Confirm ITS Specifications</h2>
-              <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
-                Review and modify the extracted specifications if needed.
-              </p>
-
-              <div className="its-info">
-                <div className="its-info-item">
-                  <span className="its-info-label">ITS Number</span>
-                  <input
-                    className="form-input"
-                    value={itsMetadata.itsNo}
-                    onChange={(e) => handleMetadataChange('itsNo', e.target.value)}
-                    placeholder="e.g., ITS/2023/0154"
-                  />
-                </div>
-                <div className="its-info-item">
-                  <span className="its-info-label">EPRF</span>
-                  <input
-                    className="form-input"
-                    value={itsMetadata.eprf}
-                    onChange={(e) => handleMetadataChange('eprf', e.target.value)}
-                    placeholder="e.g., 2023/191"
-                  />
-                </div>
-                <div className="its-info-item">
-                  <span className="its-info-label">For</span>
-                  <input
-                    className="form-input"
-                    value={itsMetadata.forUser}
-                    onChange={(e) => handleMetadataChange('forUser', e.target.value)}
-                    placeholder="e.g., Yoosuf Sameeh"
-                  />
-                </div>
-              </div>
-
-              <h3 style={{ fontSize: '1rem', marginBottom: '1rem', marginTop: '1.5rem' }}>Specifications to Compare</h3>
-
-              {itsFields.map((field, index) => (
-                <div key={index} className="form-grid" style={{ marginBottom: '0.75rem', alignItems: 'end' }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Feature</label>
-                    <input
-                      className="form-input"
-                      value={field.feature}
-                      onChange={(e) => handleFieldChange(index, 'feature', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label">Specification</label>
-                    <input
-                      className="form-input"
-                      value={field.specification}
-                      onChange={(e) => handleFieldChange(index, 'specification', e.target.value)}
-                    />
-                  </div>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => removeField(index)}
-                    style={{ height: '42px' }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-
-              <div className="btn-group">
-                <button className="btn btn-secondary" onClick={addField}>
-                  + Add Field
-                </button>
-                <button className="btn btn-primary" onClick={confirmItsFields}>
-                  Confirm & Continue →
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Upload supplier quotations */}
-          {step === 3 && (
-            <div className="card">
-              <h2 className="card-title">📤 Upload Supplier Quotations</h2>
-              <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
-                Upload up to 4 supplier quotation PDFs. The system will extract and compare them against the ITS.
-              </p>
-
-              {loading ? (
-                <div className="loading">
-                  <div className="spinner"></div>
-                  <p className="loading-text">Extracting and comparing quotations...</p>
-                </div>
-              ) : (
-                <>
-                  {supplierFiles.length < 4 && (
-                    <div
-                      className="upload-zone"
-                      onClick={() => supplierInputRef.current?.click()}
-                    >
-                      <input
-                        ref={supplierInputRef}
-                        type="file"
-                        accept=".pdf"
-                        multiple
-                        onChange={handleSupplierUpload}
-                      />
-                      <div className="upload-icon">📁</div>
-                      <p className="upload-text">Click to upload supplier quotations</p>
-                      <p className="upload-hint">PDF format • Up to {4 - supplierFiles.length} more file(s)</p>
-                    </div>
-                  )}
-
-                  {supplierFiles.length > 0 && (
-                    <div className="file-list">
-                      {supplierFiles.map((file, index) => (
-                        <div key={index} className="file-item">
-                          <div className="file-info">
-                            <span className="file-icon">📄</span>
-                            <span className="file-name">Supplier {String.fromCharCode(65 + index)}: {file.name}</span>
-                          </div>
-                          <button className="file-remove" onClick={() => removeSupplierFile(index)}>
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="btn-group">
-                    <button className="btn btn-secondary" onClick={() => setStep(2)}>
-                      ← Back
-                    </button>
-                    <button
-                      className="btn btn-primary"
-                      onClick={generateComparison}
-                      disabled={supplierFiles.length === 0}
-                    >
-                      Generate Comparison →
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Step 4: Review ITE */}
-          {step === 4 && comparisonData && (
-            <div className="card">
-              <div className="card-header-actions">
-                <h2 className="card-title">📊 Item Technical Evaluation</h2>
-              </div>
-
-              {/* Workflow Status and Actions */}
-              {currentITE && (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '1rem',
-                  backgroundColor: '#f8f9fa',
-                  borderRadius: '8px',
-                  marginBottom: '1rem'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span style={{ fontWeight: 600, color: '#495057' }}>Status:</span>
-                    <StatusBadge status={currentITE.status} />
-                    {currentITE.status === 'APPROVED' && currentITE.approvedAt && (
-                      <span style={{ fontSize: '0.875rem', color: '#6c757d' }}>
-                        Approved on {new Date(currentITE.approvedAt).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    {/* Creator: Submit for Review */}
-                    {effectiveUser?.role === 'ITE_CREATOR' &&
-                     currentITE.creatorId === effectiveUser.id &&
-                     (currentITE.status === 'DRAFT' || currentITE.status === 'REJECTED') && (
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleWorkflowAction('submit')}
-                        disabled={loading}
-                      >
-                        📤 Submit for Review
-                      </button>
-                    )}
-
-                    {/* Creator: Recall from Review */}
-                    {effectiveUser?.role === 'ITE_CREATOR' &&
-                     currentITE.creatorId === effectiveUser.id &&
-                     (currentITE.status === 'PENDING_REVIEW' || currentITE.status === 'IN_REVIEW') && (
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => handleWorkflowAction('recall')}
-                        disabled={loading}
-                      >
-                        ↩️ Recall
-                      </button>
-                    )}
-
-                    {/* Reviewer: Mark as Reviewed */}
-                    {effectiveUser?.role === 'ITE_REVIEWER' &&
-                     (currentITE.status === 'PENDING_REVIEW' || currentITE.status === 'IN_REVIEW') && (
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => handleWorkflowAction('mark_reviewed')}
-                        disabled={loading}
-                      >
-                        ✅ Complete Review
-                      </button>
-                    )}
-
-                    {/* Approver: Approve or Reject */}
-                    {effectiveUser?.role === 'ITE_APPROVER' &&
-                     currentITE.status === 'PENDING_APPROVAL' && (
-                      <>
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => handleWorkflowAction('approve')}
-                          disabled={loading}
-                          style={{ backgroundColor: '#198754' }}
-                        >
-                          ✅ Approve
-                        </button>
-                        <button
-                          className="btn btn-secondary"
-                          onClick={() => {
-                            const reason = prompt('Please provide a reason for rejection:');
-                            if (reason) handleWorkflowAction('reject', reason);
-                          }}
-                          disabled={loading}
-                          style={{ backgroundColor: '#dc3545', color: 'white' }}
-                        >
-                          ❌ Reject
-                        </button>
-                      </>
-                    )}
-
-                    {/* Admin has all actions */}
-                    {effectiveUser?.role === 'ADMIN' && (
-                      <>
-                        {currentITE.status === 'DRAFT' && (
-                          <button
-                            className="btn btn-primary"
-                            onClick={() => handleWorkflowAction('submit')}
-                            disabled={loading}
-                          >
-                            📤 Submit for Review
-                          </button>
-                        )}
-                        {(currentITE.status === 'PENDING_REVIEW' || currentITE.status === 'IN_REVIEW') && (
-                          <>
-                            <button
-                              className="btn btn-secondary"
-                              onClick={() => handleWorkflowAction('recall')}
-                              disabled={loading}
-                            >
-                              ↩️ Recall
-                            </button>
-                            <button
-                              className="btn btn-primary"
-                              onClick={() => handleWorkflowAction('mark_reviewed')}
-                              disabled={loading}
-                            >
-                              ✅ Complete Review
-                            </button>
-                          </>
-                        )}
-                        {currentITE.status === 'PENDING_APPROVAL' && (
-                          <>
-                            <button
-                              className="btn btn-primary"
-                              onClick={() => handleWorkflowAction('approve')}
-                              disabled={loading}
-                              style={{ backgroundColor: '#198754' }}
-                            >
-                              ✅ Approve
-                            </button>
-                            <button
-                              className="btn btn-secondary"
-                              onClick={() => {
-                                const reason = prompt('Please provide a reason for rejection:');
-                                if (reason) handleWorkflowAction('reject', reason);
-                              }}
-                              disabled={loading}
-                              style={{ backgroundColor: '#dc3545', color: 'white' }}
-                            >
-                              ❌ Reject
-                            </button>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <div className="its-info" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                  <div className="its-info-item">
-                    <span className="its-info-label">ITS Number</span>
-                    <span className="its-info-value">{itsMetadata.itsNo || '-'}</span>
-                  </div>
-                  <div className="its-info-item">
-                    <span className="its-info-label">EPRF</span>
-                    <span className="its-info-value">{itsMetadata.eprf || '-'}</span>
-                  </div>
-                  <div className="its-info-item">
-                    <span className="its-info-label">For</span>
-                    <span className="its-info-value">{itsMetadata.forUser || '-'}</span>
-                  </div>
-                  <button
-                    className="btn-xs"
-                    onClick={viewItsPdf}
-                    title="View Original ITS PDF"
-                    style={{ marginLeft: '1rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                  >
-                    📄 View ITS PDF
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  {currentITEId && (
-                    <button
-                      className="btn btn-secondary"
-                      onClick={(e) => exportPDF(e, currentITEId)}
-                      title="Export as PDF"
-                    >
-                      📄 Export PDF
-                    </button>
-                  )}
-                  {effectiveUser?.role !== 'ITE_VIEWER' &&
-                   (currentITE?.status !== 'APPROVED' || effectiveUser?.role === 'ADMIN') && (
-                    <button
-                      className={`btn ${isEditMode ? 'btn-primary' : 'btn-secondary'}`}
-                      onClick={() => setIsEditMode(!isEditMode)}
-                      title={currentITE?.status === 'APPROVED' ? 'Approved ITEs cannot be edited' : ''}
-                    >
-                      {isEditMode ? '💾 Save Changes' : '✏️ Enable Edit Mode'}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ overflowX: 'auto' }}>
-                <table id="comparison-table" className="comparison-table">
-                  <thead>
-                    <tr>
-                      <th>ITS Requirement</th>
-                      {comparisonData.suppliers.map((_, idx) => (
-                        <th key={idx}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
-                            <span>Supplier {String.fromCharCode(65 + idx)}</span>
-                            <button
-                              className="btn-xs"
-                              onClick={() => viewPdf(idx)}
-                              title="View Original PDF"
-                            >
-                              👁️ View PDF
-                            </button>
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comparisonData.comparison.map((row, rowIdx) => (
-                      <tr key={rowIdx}>
-                        <td>{row.feature}: {row.itsSpec}</td>
-                        {row.suppliers.map((cell, cellIdx) => {
-                          const cellKey = `${rowIdx}-${cellIdx}`;
-                          const isAccepted = acceptedCells[cellKey];
-                          return (
-                            <td
-                              key={cellIdx}
-                              className={getCellClass(cell.status, rowIdx, cellIdx)}
-                              onContextMenu={(e) => handleCellRightClick(e, rowIdx, cellIdx, cell.status)}
-                              style={{ position: 'relative' }}
-                            >
-                              {isEditMode ? (
-                                <textarea
-                                  className="cell-input"
-                                  value={cell.value || ''}
-                                  onChange={(e) => handleCellEdit(rowIdx, cellIdx, e.target.value)}
-                                  rows={2}
-                                />
-                              ) : (
-                                <>
-                                  {cell.value || 'N/A'}
-                                  {isAccepted && (
-                                    <div className="accepted-indicator" title={`Accepted by ${isAccepted.acceptedByName} on ${new Date(isAccepted.acceptedAt).toLocaleString()}`}>
-                                      ✓ Accepted
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                    {/* Delivery row */}
-                    <tr>
-                      <td>Delivery</td>
-                      {comparisonData.suppliers.map((s, idx) => (
-                        <td key={idx}>{s.delivery || '-'}</td>
-                      ))}
-                    </tr>
-                    {/* Price row */}
-                    <tr>
-                      <td>Price</td>
-                      {comparisonData.suppliers.map((s, idx) => (
-                        <td key={idx}>{s.price || '-'}</td>
-                      ))}
-                    </tr>
-                    {/* Recommendation row */}
-                    <tr className="recommendation-row">
-                      <td>ICTD Recommended</td>
-                      {comparisonData.suppliers.map((s, idx) => (
-                        <td
-                          key={idx}
-                          style={{
-                            cursor: (effectiveUser?.role !== 'ITE_VIEWER' &&
-                                    (currentITE?.status !== 'APPROVED' || effectiveUser?.role === 'ADMIN'))
-                                    ? 'pointer' : 'default',
-                            textAlign: 'center'
-                          }}
-                          onClick={(effectiveUser?.role !== 'ITE_VIEWER' &&
-                                   (currentITE?.status !== 'APPROVED' || effectiveUser?.role === 'ADMIN'))
-                                   ? () => toggleRecommendation(idx) : undefined}
-                          title={(effectiveUser?.role !== 'ITE_VIEWER' &&
-                                 (currentITE?.status !== 'APPROVED' || effectiveUser?.role === 'ADMIN'))
-                                 ? "Click to toggle recommendation" : "View only"}
-                        >
-                          {recommendations[idx] ? (
-                            <span className="checkmark">✔</span>
-                          ) : s.autoRecommend === false ? (
-                            <span className="pending">Review needed</span>
-                          ) : (
-                            <span style={{ color: '#a0aec0' }}>-</span>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginTop: '1rem' }}>
-                *Fields highlighted in <span style={{ color: 'var(--color-error)' }}>RED</span> do not meet the ITS specification.
-                Fields in <span style={{ color: '#92400e' }}>YELLOW</span> need manual verification.
-                Click on recommendation cells to toggle approval.
-              </p>
-
-              <div className="comment-section">
-                <h3>Recommendation Reason / Comments</h3>
-                <textarea
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  placeholder={
-                    (effectiveUser?.role === 'ITE_VIEWER' ||
-                     (currentITE?.status === 'APPROVED' && effectiveUser?.role !== 'ADMIN'))
-                    ? "View only - cannot edit comments"
-                    : "Enter justification for recommendations or any additional comments..."
-                  }
-                  disabled={
-                    effectiveUser?.role === 'ITE_VIEWER' ||
-                    (currentITE?.status === 'APPROVED' && effectiveUser?.role !== 'ADMIN')
-                  }
-                  style={{
-                    backgroundColor: (effectiveUser?.role === 'ITE_VIEWER' ||
-                                     (currentITE?.status === 'APPROVED' && effectiveUser?.role !== 'ADMIN'))
-                                     ? '#f5f5f5' : 'white',
-                    cursor: (effectiveUser?.role === 'ITE_VIEWER' ||
-                            (currentITE?.status === 'APPROVED' && effectiveUser?.role !== 'ADMIN'))
-                            ? 'not-allowed' : 'text'
-                  }}
-                />
-              </div>
-
-              <div className="footer-actions">
-                <button className="btn btn-secondary" onClick={() => setStep(3)}>
-                  ← Back
-                </button>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button className="btn btn-secondary" onClick={resetWorkflow}>
-                    Start Over
-                  </button>
-                  <button className="btn btn-primary" onClick={saveITE} disabled={loading}>
-                    {loading ? 'Saving...' : '💾 Save ITE'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Context Menu for marking cells as acceptable */}
-      {contextMenu && (
-        <div
-          className="context-menu"
-          style={{
-            position: 'absolute',
-            top: `${contextMenu.y}px`,
-            left: `${contextMenu.x}px`,
-            zIndex: 1000,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            className="context-menu-item"
-            onClick={markCellAsAccepted}
-          >
-            ✓ Mark as Acceptable
-          </button>
-        </div>
-      )}
+      `}</style>
     </div>
   );
 }

@@ -1,282 +1,168 @@
-# 🚀 Quick Start Guide - Azure AD Authentication
+# Quick Start Guide - New Dashboard Framework
 
-## ⚡ Immediate Next Steps
+## What Changed?
 
-### **Step 1: Configure Azure AD Redirect URI**
+Your ITE Generator application now has a professional multi-module dashboard framework! Here's what's new:
 
-1. Go to [Azure Portal](https://portal.azure.com)
-2. Navigate to **Azure Active Directory** → **App registrations**
-3. Click your app (ITE Generator)
-4. Go to **Authentication**
-5. Click **Add a platform** → **Web**
-6. Add this Redirect URI:
-   ```
-   http://localhost:3001/api/auth/callback/azure-ad
-   ```
-7. Click **Save**
+### ✨ New Features
 
-### **Step 2: Test the Application**
+1. **Persistent Left Sidebar**
+   - Quick access to all modules
+   - Dashboard home button
+   - Collapsible design
+   - Settings button for admins
 
-1. Your server is already running at: **http://localhost:3001**
-2. Open your browser and visit: **http://localhost:3001**
-3. You'll be redirected to Microsoft sign-in
-4. Sign in with your organizational account
-5. After successful sign-in, you'll be back at the app
+2. **Modern Dashboard Home**
+   - Welcome screen after login
+   - Module cards for easy navigation
+   - Quick action buttons
+   - Visual and intuitive
 
-### **Step 3: Verify Everything Works**
+3. **Top Header Bar**
+   - Global search (ready for future implementation)
+   - User profile dropdown
+   - Role badge display
+   - Clean sign-out option
 
-✅ Check that you see:
-- Your name/email in the top-right header
-- "Sign Out" button
-- Dashboard showing "Total ITEs: 0" (if new user)
-- "✨ New ITE" button
+4. **Modular Architecture**
+   - ITE module preserved with all functionality
+   - Ready for future modules
+   - Scalable design
 
-✅ Try creating a new ITE:
-- Upload an ITS PDF
-- Go through the workflow
-- Save it to database
-- Verify it shows in your dashboard
+## Getting Started
 
----
+### 1. Start the Application
 
-## 🔑 Current Configuration
-
-**Application URL:** http://localhost:3001
-
-**Azure AD Redirect URI (Required):**
-```
-http://localhost:3001/api/auth/callback/azure-ad
-```
-
-**Environment Variables (.env):**
-```
-✅ AZURE_AD_CLIENT_ID      = Set
-✅ AZURE_AD_CLIENT_SECRET  = Set
-✅ AZURE_AD_TENANT_ID      = Set
-✅ NEXTAUTH_URL            = http://localhost:3001
-✅ NEXTAUTH_SECRET         = Auto-generated
-✅ DATABASE_URL            = Set
-✅ ANTHROPIC_API_KEY       = Set
-```
-
----
-
-## 🎭 User Roles
-
-**New Users (Default Role: "user"):**
-- ✅ Can create ITEs
-- ✅ Can view their own ITEs
-- ✅ Can edit their own ITEs
-- ✅ Can delete their own ITEs
-- ❌ Cannot see other users' ITEs
-
-**Admin Users (Role: "admin"):**
-- ✅ Can view ALL ITEs from ALL users
-- ✅ Can edit any ITE
-- ✅ Can delete any ITE
-- ✅ Full system access
-
----
-
-## 🛠️ How to Make Someone an Admin
-
-### **Option 1: Using Prisma Studio (GUI)**
-```bash
-npx prisma studio
-```
-1. Open **User** table
-2. Find the user by email
-3. Change `role` from "user" to "admin"
-4. Save
-
-### **Option 2: Using SQL**
-```bash
-psql -d ite_db -c "UPDATE \"User\" SET role = 'admin' WHERE email = 'admin@example.com';"
-```
-
-### **Option 3: Using Prisma (from Node.js console)**
-```javascript
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-
-await prisma.user.update({
-  where: { email: 'admin@example.com' },
-  data: { role: 'admin' }
-});
-```
-
----
-
-## 🐛 Common Issues & Fixes
-
-### **Issue: "Redirect URI mismatch error"**
-
-**Symptoms:** After clicking sign-in, you get an error from Microsoft
-
-**Fix:**
-1. Go to Azure Portal → Your App → Authentication
-2. Ensure redirect URI is **exactly**:
-   ```
-   http://localhost:3001/api/auth/callback/azure-ad
-   ```
-3. No trailing slash, correct port (3001 not 3000)
-
----
-
-### **Issue: "Session error" or "Invalid credentials"**
-
-**Symptoms:** Can't sign in, or get kicked out immediately
-
-**Fix:**
-1. Clear browser cookies for localhost
-2. Restart dev server:
-   ```bash
-   # Stop current server (Ctrl+C)
-   npm run dev
-   ```
-3. Try signing in again
-
----
-
-### **Issue: Can't see any ITEs after signing in**
-
-**Symptoms:** Dashboard shows 0 ITEs, but you know some exist
-
-**Reason:** Old ITEs were created before authentication was added, so they have no `userId`
-
-**Fix:** Choose one:
-
-**Option A:** Delete old ITEs and create new ones
-```sql
-DELETE FROM "ITE" WHERE "userId" IS NULL;
-```
-
-**Option B:** Assign old ITEs to yourself
-```sql
-UPDATE "ITE" SET "userId" = '<your-user-id>' WHERE "userId" IS NULL;
-```
-
-To find your user ID:
-```sql
-SELECT id FROM "User" WHERE email = 'your-email@example.com';
-```
-
----
-
-### **Issue: "NEXTAUTH_SECRET" error**
-
-**Symptoms:** Error about missing or invalid NEXTAUTH_SECRET
-
-**Fix:**
-1. Check `.env` file has `NEXTAUTH_SECRET`
-2. If missing, run:
-   ```bash
-   openssl rand -base64 32
-   ```
-3. Add to `.env`:
-   ```
-   NEXTAUTH_SECRET=<generated-value>
-   ```
-4. Restart server
-
----
-
-## 📝 Quick Commands
-
-### **Start Development Server:**
 ```bash
 npm run dev
 ```
 
-### **View Database (Prisma Studio):**
-```bash
-npx prisma studio
-```
+### 2. Login Flow
 
-### **Run Database Migrations:**
-```bash
-npx prisma migrate dev
-```
+1. Navigate to http://localhost:3000
+2. You'll see the new login page
+3. Click "Sign In to Continue"
+4. After authentication, you'll be redirected to the dashboard
 
-### **Generate Prisma Client (after schema changes):**
-```bash
-npx prisma generate
-```
+### 3. Dashboard Navigation
 
-### **View All Users:**
-```bash
-psql -d ite_db -c "SELECT id, email, name, role FROM \"User\";"
-```
+The dashboard home shows:
+- Welcome message with your name
+- Module cards (ITE + future modules)
+- Quick action buttons
 
-### **View All ITEs:**
-```bash
-psql -d ite_db -c "SELECT \"iteNumber\", \"createdAt\", \"userId\" FROM \"ITE\";"
-```
+### 4. Using the Sidebar
+
+**Left Sidebar Icons:**
+- 🏠 Dashboard - Return to home
+- 📋 ITE Module - Access ITE functionality
+- 📊 Module 2 - Coming soon
+- 📈 Module 3 - Coming soon
+- ⚙️ Settings - Admin panel (admins only)
+- ◀ Collapse - Toggle sidebar size
+
+### 5. ITE Module Access
+
+Click on the ITE module card or sidebar icon to access:
+- View all ITEs
+- Create new ITE
+- Edit existing ITEs
+- Review and approve ITEs
+- Export to PDF
+- All existing workflow features
+
+## User Roles & Access
+
+All existing role functionality is preserved:
+
+- **Admin** - Full access + user management + role testing
+- **ITE Creator** - Create and edit own ITEs
+- **ITE Reviewer** - Review submitted ITEs
+- **ITE Approver** - Approve reviewed ITEs
+- **ITE Viewer** - View-only access
+
+## Mobile & Responsive
+
+The dashboard automatically adapts to your screen size:
+- **Desktop** - Full sidebar with labels
+- **Tablet** - Collapsed sidebar (icons only)
+- **Mobile** - Horizontal sidebar at top
+
+## Common Tasks
+
+### Create a New ITE
+1. Click "New ITE" button on dashboard, OR
+2. Click ITE module → Click "New ITE" button
+
+### Navigate Between Modules
+1. Click module icon in sidebar, OR
+2. Return to dashboard home and click module card
+
+### Access Admin Panel
+1. Admin role only
+2. Click ⚙️ icon in sidebar, OR
+3. Click "Manage Users" quick action button
+
+### Sign Out
+1. Click your name/avatar in top-right
+2. Click "Sign Out" in dropdown
+
+## What Stayed the Same?
+
+✅ All ITE functionality (no changes!)
+✅ User authentication
+✅ Role-based access control
+✅ Workflow system (Draft → Review → Approval)
+✅ PDF upload and processing
+✅ Export functionality
+✅ Database schema
+✅ API endpoints
+✅ Admin panel
+
+## Adding Future Modules
+
+When you're ready to add more modules:
+
+1. Create new route: app/dashboard/[module-name]/page.js
+2. Update sidebar config in Sidebar.js
+3. Update dashboard home in dashboard/page.js
+4. That's it!
+
+## Troubleshooting
+
+### Issue: Can't see sidebar
+- **Solution**: Check browser width, sidebar auto-collapses on smaller screens
+
+### Issue: Not redirecting to dashboard
+- **Solution**: Clear browser cache and cookies, try logging in again
+
+### Issue: Module shows "Coming Soon"
+- **Solution**: These are placeholder modules for future development
+
+### Issue: Lost existing ITE data
+- **Solution**: All data is preserved! Go to ITE module to see your ITEs
+
+## Files You Might Want to Customize
+
+- Sidebar.js - Add/remove modules, change icons
+- DashboardHeader.js - Customize header content
+- dashboard/page.js - Update welcome message, quick actions
+- dashboard.css - Modify colors, spacing, animations
+
+## Support
+
+For questions or issues:
+1. Check the implementation docs: DASHBOARD_IMPLEMENTATION.md
+2. Review architecture: ARCHITECTURE.md
+3. All existing ITE features work exactly as before
+
+## Next Steps
+
+1. **Explore** the new dashboard interface
+2. **Test** all existing ITE functionality
+3. **Plan** what modules you'd like to add next
+4. **Customize** colors and branding to your preference
 
 ---
 
-## 🎯 What Happens Next?
-
-### **On First Sign-In:**
-1. Your Microsoft account info is retrieved
-2. A new User record is created in the database:
-   - Email from your Microsoft account
-   - Name from your Microsoft account
-   - Azure ID (unique identifier)
-   - Role: "user" (default)
-3. Session is created
-4. You're redirected to the dashboard
-
-### **On Subsequent Sign-Ins:**
-1. Existing user is found by email
-2. User info is updated (if name changed)
-3. Session is created
-4. You're redirected to the dashboard
-
----
-
-## ✅ Testing Checklist
-
-- [ ] Can sign in with Microsoft account
-- [ ] See your name in header after sign-in
-- [ ] Can sign out using "Sign Out" button
-- [ ] Dashboard loads without errors
-- [ ] Can create a new ITE
-- [ ] Created ITE appears in dashboard
-- [ ] Can view created ITE
-- [ ] Can edit created ITE
-- [ ] Can delete created ITE
-- [ ] After sign out + sign in, still see your ITEs
-
----
-
-## 🚀 Ready for Production?
-
-When you're ready to deploy, update these:
-
-1. **Azure AD:**
-   - Add production redirect URI: `https://yourdomain.com/api/auth/callback/azure-ad`
-
-2. **.env (Production):**
-   ```env
-   NEXTAUTH_URL=https://yourdomain.com
-   ```
-
-3. **Deploy app and run migration:**
-   ```bash
-   npx prisma migrate deploy
-   ```
-
----
-
-## 📚 Additional Resources
-
-- **NextAuth Documentation:** https://next-auth.js.org/
-- **Azure AD Provider:** https://next-auth.js.org/providers/azure-ad
-- **Prisma Documentation:** https://www.prisma.io/docs
-- **Enhancement Plan:** See `ENHANCEMENT_PLAN.md`
-- **Full Setup Guide:** See `AUTHENTICATION_SETUP.md`
-
----
-
-**🎉 You're all set! Visit http://localhost:3001 and sign in to get started!**
+**Enjoy your new dashboard! 🚀**
