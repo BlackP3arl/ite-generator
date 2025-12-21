@@ -50,12 +50,7 @@ This security assessment identified **12 findings** across multiple severity lev
 - Session tokens can be forged with the exposed NEXTAUTH_SECRET
 - Database can be accessed directly
 
-**Evidence**:
-```plaintext
-ANTHROPIC_API_KEY=key"  # Malformed and appears to be placeholder, but .env has real key
-AZURE_AD_CLIENT_SECRET=Iag8Q~9SodHIetssFWNnBYCC2y-O2co0taUrvazR  # Real secret
-NEXTAUTH_SECRET=Y4jv7vDLFT4+Pp6huHDU0XWhebWfWhQYO3zwho89sr8=  # Real secret
-```
+
 
 **Recommendation**:
 1. **IMMEDIATE**: Rotate ALL credentials:
@@ -64,9 +59,7 @@ NEXTAUTH_SECRET=Y4jv7vDLFT4+Pp6huHDU0XWhebWfWhQYO3zwho89sr8=  # Real secret
    - Generate new NEXTAUTH_SECRET: `openssl rand -base64 32`
 2. Replace `.env.example` with placeholder values only:
    ```plaintext
-   ANTHROPIC_API_KEY=your_api_key_here
-   AZURE_AD_CLIENT_SECRET=your_azure_secret_here
-   NEXTAUTH_SECRET=generate_with_openssl_rand_base64_32
+
    ```
 3. Check git history for exposed secrets and consider repository rotation if committed
 4. Enable secret scanning on your repository
