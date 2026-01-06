@@ -1,6 +1,6 @@
 'use client';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import DashboardHeader from '../components/layout/DashboardHeader';
@@ -9,7 +9,10 @@ import '../styles/dashboard.css';
 export default function DashboardLayout({ children }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
   const [messageInfo, setMessageInfo] = useState(null);
+
+  const isHomePage = pathname === '/dashboard';
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -43,12 +46,13 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar session={session} />
+      <Sidebar session={session} isHomePage={isHomePage} />
 
       <div className="dashboard-main">
         <DashboardHeader
           session={session}
           messageInfo={messageInfo}
+          hideSearch={isHomePage}
         />
 
         <div className="dashboard-content">

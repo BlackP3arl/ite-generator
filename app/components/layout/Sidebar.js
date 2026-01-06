@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
-export default function Sidebar({ session }) {
+export default function Sidebar({ session, isHomePage = false }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -45,7 +45,7 @@ export default function Sidebar({ session }) {
   };
 
   return (
-    <div className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+    <div className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isHomePage ? 'sidebar-transparent' : ''}`}>
       <div className="sidebar-header">
         <button
           className={`dashboard-btn ${pathname === '/dashboard' ? 'active' : ''}`}
@@ -57,19 +57,7 @@ export default function Sidebar({ session }) {
       </div>
 
       <div className="sidebar-modules">
-        {modules.map((module) => (
-          <div
-            key={module.id}
-            className={`module-tile ${isActive(module.path) ? 'active' : ''} ${!module.enabled ? 'disabled' : ''}`}
-            onClick={() => handleModuleClick(module)}
-            title={module.description}
-          >
-            <div className="module-icon">{module.icon}</div>
-            {!module.enabled && (
-              <div className="module-badge"></div>
-            )}
-          </div>
-        ))}
+        {/* Module icons removed for cleaner look */}
       </div>
 
       <div className="sidebar-footer">

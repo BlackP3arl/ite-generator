@@ -85,16 +85,18 @@ export function ThemeToggle() {
           width: 40px;
           height: 40px;
           padding: 0;
-          background: transparent;
-          border: none;
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           border-radius: 50%;
           cursor: pointer;
           transition: all 0.2s ease;
-          color: var(--color-text);
+          color: white;
         }
 
         .theme-btn:hover {
-          background: #f8f9fa;
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(255, 255, 255, 0.3);
         }
 
         .theme-icon {
@@ -106,10 +108,11 @@ export function ThemeToggle() {
           position: absolute;
           top: calc(100% + 0.5rem);
           right: 0;
-          background: white;
-          border: 1px solid var(--color-border);
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
           border-radius: 12px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
           padding: 0.25rem;
           min-width: 160px;
           z-index: 1000;
@@ -137,16 +140,16 @@ export function ThemeToggle() {
           cursor: pointer;
           transition: all 0.15s ease;
           font-size: 0.875rem;
-          color: var(--color-text);
+          color: #1e293b;
           text-align: left;
         }
 
         .theme-option:hover {
-          background: #f8f9fa;
+          background: rgba(0, 0, 0, 0.05);
         }
 
         .theme-option.active {
-          background: #f8f9fa;
+          background: rgba(0, 0, 0, 0.05);
           font-weight: 600;
         }
 
@@ -159,7 +162,7 @@ export function ThemeToggle() {
         }
 
         .check {
-          color: var(--color-primary);
+          color: #3b82f6;
           font-weight: 700;
         }
       `}</style>

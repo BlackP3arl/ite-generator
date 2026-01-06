@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { signOut } from 'next-auth/react';
 import { ThemeToggle } from '../ThemeToggle';
 
-export default function DashboardHeader({ session, messageInfo }) {
+export default function DashboardHeader({ session, messageInfo, hideSearch = false }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
 
@@ -44,6 +44,10 @@ export default function DashboardHeader({ session, messageInfo }) {
         return role;
     }
   };
+
+  if (hideSearch) {
+    return null;
+  }
 
   return (
     <>

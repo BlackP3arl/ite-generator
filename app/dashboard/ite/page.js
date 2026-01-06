@@ -2,11 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import StatusBadge from '../../components/StatusBadge';
 import { getAvailableActions } from '../../../lib/roles';
 
 export default function ITEModule() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [roleOverride, setRoleOverride] = useState(null);
@@ -39,6 +42,15 @@ export default function ITEModule() {
     fetchITEs();
     fetchDashboardStats();
   }, []);
+
+  // Handle action=create URL parameter
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'create') {
+      resetWorkflow();
+      setShowDashboard(false);
+    }
+  }, [searchParams]);
 
   const fetchDashboardStats = async () => {
     try {
@@ -666,13 +678,10 @@ export default function ITEModule() {
           <div className="steps">
             <button
               className="step-dashboard-btn"
-              onClick={() => {
-                resetWorkflow();
-                setShowDashboard(true);
-              }}
-              title="Back to Dashboard"
+              onClick={() => router.push('/dashboard')}
+              title="Back to Home"
             >
-              🏠 Dashboard
+              🏠 Home
             </button>
             <div className={`step ${step === 1 ? 'active' : step > 1 ? 'completed' : ''}`}>
               <span className="step-number">{step > 1 ? '✓' : '1'}</span>

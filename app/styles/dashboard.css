@@ -25,6 +25,12 @@
   width: 68px;
 }
 
+.sidebar.sidebar-transparent {
+  background: transparent;
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .sidebar-header {
   width: 100%;
   padding: 0.75rem 0;
@@ -46,20 +52,29 @@
   font-size: 1rem;
   font-weight: 400;
   cursor: pointer;
-  transition: all 0.1s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   margin: 0;
   padding: 0;
+  border-radius: 12px;
 }
 
 .dashboard-btn:hover {
-  background: #3d3d3d;
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
+  transform: translateY(-2px);
 }
 
 .dashboard-btn.active {
   color: #6264a7;
-  border-left-color: #6264a7;
+  background: rgba(98, 100, 167, 0.1);
+}
+
+.sidebar-transparent .dashboard-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
 .dashboard-icon {
@@ -174,7 +189,7 @@
 }
 
 .settings-btn {
-  width: 100%;
+  width: 48px;
   height: 48px;
   display: flex;
   align-items: center;
@@ -187,17 +202,27 @@
   font-size: 0.9rem;
   font-weight: 400;
   cursor: pointer;
-  transition: all 0.1s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px;
+  margin: 0 auto;
 }
 
 .settings-btn:hover {
-  background: #3d3d3d;
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
+  transform: translateY(-2px);
 }
 
 .settings-btn.active {
   color: #6264a7;
-  border-left-color: #6264a7;
+  background: rgba(98, 100, 167, 0.1);
+}
+
+.sidebar-transparent .settings-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
 .settings-icon {
