@@ -16,7 +16,7 @@ export default function ITEModule() {
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const [itsFile, setItsFile] = useState(null);
   const [itsFields, setItsFields] = useState(null);
-  const [itsMetadata, setItsMetadata] = useState({ itsNo: '', eprf: '', forUser: '' });
+  const [itsMetadata, setItsMetadata] = useState({ itsNo: '', prNumber: '', eprf: '', forUser: '' });
   const [supplierFiles, setSupplierFiles] = useState([]);
   const [comparisonData, setComparisonData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -185,7 +185,7 @@ export default function ITEModule() {
 
       const data = await response.json();
       setItsFields(data.fields);
-      setItsMetadata(data.metadata || { itsNo: '', eprf: '', forUser: '' });
+      setItsMetadata(data.metadata || { itsNo: '', prNumber: '', eprf: '', forUser: '' });
       setStep(2);
     } catch (err) {
       setError(err.message);
@@ -771,6 +771,15 @@ export default function ITEModule() {
                   />
                 </div>
                 <div className="its-info-item">
+                  <span className="its-info-label">PR Number</span>
+                  <input
+                    className="form-input"
+                    value={itsMetadata.prNumber || ''}
+                    onChange={(e) => handleMetadataChange('prNumber', e.target.value)}
+                    placeholder="e.g., PR-2023-001"
+                  />
+                </div>
+                <div className="its-info-item">
                   <span className="its-info-label">EPRF</span>
                   <input
                     className="form-input"
@@ -1054,6 +1063,10 @@ export default function ITEModule() {
                   <div className="its-info-item">
                     <span className="its-info-label">ITS Number</span>
                     <span className="its-info-value">{itsMetadata.itsNo || '-'}</span>
+                  </div>
+                  <div className="its-info-item">
+                    <span className="its-info-label">PR Number</span>
+                    <span className="its-info-value">{itsMetadata.prNumber || '-'}</span>
                   </div>
                   <div className="its-info-item">
                     <span className="its-info-label">EPRF</span>

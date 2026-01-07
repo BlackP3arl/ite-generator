@@ -47,6 +47,7 @@ model User {
 model ITE {
   id             Int            @id @default(autoincrement())
   iteNumber      String         @unique // Format: "ITE-YYYY-XXX"
+  prNumber       String?        // PR Number associated with this ITE
   year           Int            // To easily track running numbers per year
   runningNumber  Int            // The XXX part
   createdAt      DateTime       @default(now())

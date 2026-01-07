@@ -178,6 +178,7 @@ export async function POST(request) {
         const newITE = await prisma.iTE.create({
             data: {
                 iteNumber,
+                prNumber: metadata.prNumber || null,
                 year: currentYear,
                 runningNumber,
                 metadata: JSON.stringify(metadata),

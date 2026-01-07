@@ -60,6 +60,7 @@ export async function PUT(request, { params }) {
             );
         }
         const formData = await request.formData();
+        const metadata = formData.get('metadata') ? JSON.parse(formData.get('metadata')) : null;
         const comparisonData = JSON.parse(formData.get('comparisonData'));
         const recommendations = JSON.parse(formData.get('recommendations'));
         const acceptedCells = formData.get('acceptedCells') || '{}';
@@ -151,16 +152,24 @@ export async function PUT(request, { params }) {
                 supplierFiles[i] = '/uploads/' + iteNumber.replace('/', '_') + '/' + fileName;
             }
         }
+        const updateData = {
+            comparisonData: JSON.stringify(comparisonData),
+            recommendations: JSON.stringify(recommendations),
+            supplierFiles: JSON.stringify(supplierFiles),
+            itsFilePath: itsFilePath,
+            comments: comments,
+            acceptedCells: acceptedCells,
+        };
+
+        // Update metadata and prNumber if metadata is provided
+        if (metadata) {
+            updateData.metadata = JSON.stringify(metadata);
+            updateData.prNumber = metadata.prNumber || null;
+        }
+
         const updatedITE = await prisma.iTE.update({
             where: { id },
-            data: {
-                comparisonData: JSON.stringify(comparisonData),
-                recommendations: JSON.stringify(recommendations),
-                supplierFiles: JSON.stringify(supplierFiles),
-                itsFilePath: itsFilePath,
-                comments: comments,
-                acceptedCells: acceptedCells,
-            },
+            data: updateData,
         });
 
         // Create audit log for update

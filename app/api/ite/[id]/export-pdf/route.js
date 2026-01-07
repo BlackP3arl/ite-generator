@@ -57,10 +57,11 @@ export async function GET(request, { params }) {
     doc.setFont('helvetica', 'normal');
     const startY = 25;
     doc.text(`ITE Number: ${ite.iteNumber}`, 14, startY);
-    doc.text(`ITS No: ${metadata.itsNo || 'N/A'}`, 14, startY + 5);
-    doc.text(`EPRF: ${metadata.eprf || 'N/A'}`, 14, startY + 10);
-    doc.text(`For User: ${metadata.forUser || 'N/A'}`, 14, startY + 15);
-    doc.text(`Date: ${new Date(ite.createdAt).toLocaleDateString()}`, 200, startY + 15);
+    doc.text(`PR Number: ${ite.prNumber || 'N/A'}`, 14, startY + 5);
+    doc.text(`ITS No: ${metadata.itsNo || 'N/A'}`, 14, startY + 10);
+    doc.text(`EPRF: ${metadata.eprf || 'N/A'}`, 14, startY + 15);
+    doc.text(`For User: ${metadata.forUser || 'N/A'}`, 14, startY + 20);
+    doc.text(`Date: ${new Date(ite.createdAt).toLocaleDateString()}`, 200, startY + 20);
 
     // Prepare table data
     const headers = [
@@ -134,7 +135,7 @@ export async function GET(request, { params }) {
 
     // Add comparison table
     autoTable(doc, {
-      startY: startY + 25,
+      startY: startY + 30,
       head: [headers],
       body: rows,
       theme: 'grid',
