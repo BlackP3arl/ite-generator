@@ -695,8 +695,8 @@ export default function ITEModule() {
               <span className="step-number">{step > 3 ? '✓' : '3'}</span>
               Upload Quotes
             </div>
-            <div className={`step ${step === 4 ? 'active' : ''}`}>
-              <span className="step-number">4</span>
+            <div className={`step ${step === 4 ? (currentITE?.status === 'APPROVED' ? 'completed' : 'active') : ''}`}>
+              <span className="step-number">{currentITE?.status === 'APPROVED' ? '✓' : '4'}</span>
               Review ITE
             </div>
           </div>
