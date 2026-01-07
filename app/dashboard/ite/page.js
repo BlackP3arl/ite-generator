@@ -1096,12 +1096,10 @@ export default function ITEModule() {
                       📄 Export PDF
                     </button>
                   )}
-                  {effectiveUser?.role !== 'ITE_VIEWER' &&
-                   (currentITE?.status !== 'APPROVED' || effectiveUser?.role === 'ADMIN') && (
+                  {effectiveUser?.role !== 'ITE_VIEWER' && currentITE?.status !== 'APPROVED' && (
                     <button
                       className={`btn ${isEditMode ? 'btn-primary' : 'btn-secondary'}`}
                       onClick={() => setIsEditMode(!isEditMode)}
-                      title={currentITE?.status === 'APPROVED' ? 'Approved ITEs cannot be edited' : ''}
                     >
                       {isEditMode ? '💾 Save Changes' : '✏️ Enable Edit Mode'}
                     </button>
