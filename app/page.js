@@ -81,6 +81,8 @@ export default function Home() {
           justify-content: center;
           min-height: 100vh;
           background: var(--color-bg);
+          position: relative;
+          z-index: 1;
         }
 
         .login-container {
@@ -88,48 +90,73 @@ export default function Home() {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           padding: 2rem;
+          position: relative;
+          z-index: 1;
         }
 
         .login-card {
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          background: rgba(20, 24, 30, 0.7);
+          backdrop-filter: blur(40px) saturate(180%);
+          -webkit-backdrop-filter: blur(40px) saturate(180%);
+          border: 1px solid var(--glass-border);
+          border-radius: 24px;
+          box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5),
+                      0 0 0 1px rgba(255, 255, 255, 0.05),
+                      0 0 64px rgba(245, 166, 35, 0.1);
           max-width: 480px;
           width: 100%;
           overflow: hidden;
+          position: relative;
+        }
+
+        .login-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, var(--gold), transparent);
         }
 
         .login-header {
-          background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
-          color: white;
+          background: linear-gradient(135deg, rgba(245, 166, 35, 0.1) 0%, rgba(245, 166, 35, 0.05) 100%);
+          color: var(--foreground);
           padding: 3rem 2rem;
           text-align: center;
+          position: relative;
         }
 
         .login-icon {
           font-size: 4rem;
           margin-bottom: 1rem;
+          filter: drop-shadow(0 0 20px rgba(245, 166, 35, 0.3));
         }
 
         .login-title {
           font-size: 2rem;
           font-weight: 700;
           margin-bottom: 0.5rem;
+          background: linear-gradient(135deg, var(--foreground) 0%, var(--gold) 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
         .login-subtitle {
           font-size: 1rem;
-          opacity: 0.9;
+          opacity: 0.8;
+          color: var(--muted-foreground);
         }
 
         .login-content {
           padding: 2.5rem 2rem;
+          background: rgba(255, 255, 255, 0.02);
         }
 
         .login-description {
-          color: var(--color-text-secondary);
+          color: var(--muted-foreground);
           line-height: 1.6;
           margin-bottom: 2rem;
           text-align: center;
@@ -140,10 +167,18 @@ export default function Home() {
           padding: 1rem 2rem;
           font-size: 1.1rem;
           margin-bottom: 2rem;
+          background: linear-gradient(135deg, var(--gold) 0%, #D89420 100%);
+          box-shadow: 0 8px 24px rgba(245, 166, 35, 0.3);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-large:hover {
+          box-shadow: 0 12px 32px rgba(245, 166, 35, 0.4);
+          transform: translateY(-2px);
         }
 
         .login-features {
-          border-top: 1px solid var(--color-border);
+          border-top: 1px solid var(--glass-border);
           padding-top: 1.5rem;
           display: flex;
           flex-direction: column;
@@ -154,12 +189,20 @@ export default function Home() {
           display: flex;
           align-items: center;
           gap: 0.75rem;
-          color: var(--color-text);
+          color: var(--foreground);
+          padding: 0.5rem;
+          border-radius: 0.5rem;
+          transition: all 0.2s ease;
+        }
+
+        .feature-item:hover {
+          background: rgba(255, 255, 255, 0.05);
         }
 
         .feature-icon {
           font-size: 1.5rem;
           line-height: 1;
+          filter: drop-shadow(0 0 10px rgba(245, 166, 35, 0.3));
         }
 
         .feature-text {
