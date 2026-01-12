@@ -760,11 +760,13 @@
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
-  background: white;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  min-width: 200px;
+  background: rgba(20, 24, 30, 0.95);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  min-width: 220px;
   z-index: 1000;
   overflow: hidden;
 }
@@ -773,8 +775,8 @@
   padding: 0.75rem 1rem;
   font-weight: 600;
   font-size: 0.875rem;
-  color: var(--color-text-secondary);
-  border-bottom: 1px solid var(--color-border);
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .role-option {
@@ -785,17 +787,18 @@
   text-align: left;
   cursor: pointer;
   font-size: 0.875rem;
-  color: var(--color-text);
-  transition: background 0.15s ease;
+  color: var(--foreground);
+  transition: all 0.2s ease;
 }
 
 .role-option:hover {
-  background: #f8f9fa;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .role-option.active {
-  background: #e7f3ff;
-  color: var(--color-primary);
+  background: rgba(245, 166, 35, 0.15);
+  color: var(--gold);
+  border-left: 3px solid var(--gold);
 }
 
 /* Responsive Styles */
