@@ -75,12 +75,7 @@ export default function DashboardHeader({ session, messageInfo, hideSearch = fal
                 {session?.user?.name || session?.user?.email}
               </span>
               {session?.user?.role && (
-                <span
-                  className="user-role-badge"
-                  style={{
-                    backgroundColor: getRoleBadgeColor(session.user.role),
-                  }}
-                >
+                <span className="user-role-badge">
                   {getRoleDisplayName(session.user.role)}
                 </span>
               )}

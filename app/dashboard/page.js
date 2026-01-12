@@ -122,7 +122,7 @@ export default function DashboardHome() {
         .gradient-bg {
           position: absolute;
           inset: 0;
-          background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+          background: linear-gradient(135deg, #0B0D10 0%, #14181E 50%, #1a1f27 100%);
           overflow: hidden;
         }
 
@@ -151,7 +151,8 @@ export default function DashboardHome() {
 
         .home-user-profile:hover {
           background: rgba(255, 255, 255, 0.15);
-          border-color: rgba(255, 255, 255, 0.3);
+          border-color: rgba(245, 166, 35, 0.4);
+          box-shadow: 0 4px 12px rgba(245, 166, 35, 0.15);
         }
 
         .home-user-info {
@@ -172,7 +173,8 @@ export default function DashboardHome() {
           padding: 0.125rem 0.5rem;
           border-radius: 12px;
           font-weight: 600;
-          background: rgba(255, 255, 255, 0.2);
+          background: rgba(245, 166, 35, 0.2);
+          border: 1px solid rgba(245, 166, 35, 0.3);
           color: white;
         }
 
@@ -193,11 +195,12 @@ export default function DashboardHome() {
           position: absolute;
           top: calc(100% + 0.5rem);
           right: 0;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
+          background: rgba(20, 24, 30, 0.95);
+          backdrop-filter: blur(20px) saturate(180%);
+          -webkit-backdrop-filter: blur(20px) saturate(180%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 12px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
           min-width: 220px;
           z-index: 1000;
           overflow: hidden;
@@ -209,31 +212,32 @@ export default function DashboardHome() {
           background: none;
           width: 100%;
           text-align: left;
-          transition: background 0.15s ease;
+          transition: all 0.2s ease;
+          color: var(--foreground);
         }
 
         .home-dropdown-item:hover {
-          background: rgba(0, 0, 0, 0.05);
+          background: rgba(255, 255, 255, 0.05);
         }
 
         .home-user-info-item {
-          border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .home-dropdown-user-name {
           font-weight: 600;
-          color: #1e293b;
+          color: white;
           margin-bottom: 0.25rem;
         }
 
         .home-dropdown-user-email {
           font-size: 0.85rem;
-          color: #64748b;
+          color: rgba(255, 255, 255, 0.7);
         }
 
         .home-dropdown-divider {
           height: 1px;
-          background: rgba(0, 0, 0, 0.1);
+          background: rgba(255, 255, 255, 0.1);
           margin: 0;
         }
 
@@ -244,12 +248,12 @@ export default function DashboardHome() {
           cursor: pointer;
           font-size: 0.9rem;
           font-weight: 500;
-          color: #1e293b;
+          color: white;
         }
 
         .home-dropdown-btn:hover {
-          background: #fee;
-          color: #dc2626;
+          background: rgba(239, 68, 68, 0.15);
+          color: #ff6b6b;
         }
 
         .gradient-orb {
@@ -263,7 +267,7 @@ export default function DashboardHome() {
         .gradient-orb-1 {
           width: 500px;
           height: 500px;
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          background: linear-gradient(135deg, #F5A623, #D89420);
           top: -10%;
           left: -10%;
           animation-delay: 0s;
@@ -272,7 +276,7 @@ export default function DashboardHome() {
         .gradient-orb-2 {
           width: 400px;
           height: 400px;
-          background: linear-gradient(135deg, #06b6d4, #3b82f6);
+          background: linear-gradient(135deg, #D89420, #F5A623);
           bottom: -10%;
           right: -10%;
           animation-delay: -7s;
@@ -281,7 +285,7 @@ export default function DashboardHome() {
         .gradient-orb-3 {
           width: 350px;
           height: 350px;
-          background: linear-gradient(135deg, #8b5cf6, #ec4899);
+          background: linear-gradient(135deg, #F5A623, #ffc857);
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
@@ -336,9 +340,9 @@ export default function DashboardHome() {
 
         .action-btn:hover {
           background: rgba(255, 255, 255, 0.15);
-          border-color: rgba(255, 255, 255, 0.3);
+          border-color: rgba(245, 166, 35, 0.5);
           transform: translateY(-4px);
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+          box-shadow: 0 20px 40px rgba(245, 166, 35, 0.25);
         }
 
         .action-btn-icon {
