@@ -214,6 +214,11 @@ export default function ITEModule() {
   };
 
   const confirmItsFields = () => {
+    if (!itsMetadata.prNumber || itsMetadata.prNumber.trim() === '') {
+      setError('PR Number is required. Please enter a PR Number before proceeding.');
+      return;
+    }
+    setError(null);
     setStep(3);
   };
 
@@ -606,6 +611,7 @@ export default function ITEModule() {
                     <th>Status</th>
                     <th>Date</th>
                     <th>For</th>
+                    <th>PR Number</th>
                     <th>EPRF</th>
                     <th>Creator</th>
                     <th>Actions</th>
@@ -630,6 +636,7 @@ export default function ITEModule() {
                       </td>
                       <td>{new Date(ite.createdAt).toLocaleDateString()}</td>
                       <td>{metadata.forUser || '-'}</td>
+                      <td>{metadata.prNumber || '-'}</td>
                       <td>{metadata.eprf || '-'}</td>
                       <td>{ite.creator?.name || ite.creator?.email || '-'}</td>
                       <td className="ite-actions">
